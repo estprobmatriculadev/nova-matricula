@@ -641,3 +641,28 @@ tr:hover td {
 .progress-low    { background-color: #f97316; }
 .progress-medium { background-color: #f59e0b; }
 .progress-ok     { background-color: var(--primary); }
+
+/* =====================
+   Hydration-Safe Mobile Tweaks
+   ===================== */
+@media (min-width: 480px) {
+  .glass-card {
+    padding: 3rem 2.5rem !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar-close-btn {
+    display: flex !important;
+  }
+}
+
+/* Evita que selects com textos longos quebrem o layout em mobile */
+select.form-input {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  width: 100%;
+  display: block;
+}
+

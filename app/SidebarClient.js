@@ -59,11 +59,7 @@ export default function SidebarClient({ session }) {
           ✕
         </button>
 
-        <style>{`
-          @media (max-width: 768px) {
-            .sidebar-close-btn { display: flex !important; }
-          }
-        `}</style>
+
 
         {/* Logo */}
         <div style={{ marginBottom: '2.5rem', marginTop: '0.25rem' }}>

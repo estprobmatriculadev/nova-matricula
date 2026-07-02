@@ -180,19 +180,7 @@ export default function LoginPage() {
         border: '1px solid var(--border-color)',
         boxShadow: 'var(--shadow-lg)'
       }}>
-        <style>{`
-          @media (min-width: 480px) {
-            .glass-card { padding: 3rem 2.5rem !important; }
-          }
-          /* Custom style to make select elements display nicely even with long text */
-          select.form-input {
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            overflow: hidden;
-            width: 100%;
-            display: block;
-          }
-        `}</style>
+
         {/* Header Logo */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <img
