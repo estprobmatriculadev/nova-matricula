@@ -42,12 +42,6 @@ export async function getNewEnrollments() {
   }
 }
 
-// Helper to clean CPF strings
-function cleanCpf(cpf) {
-  if (!cpf) return '';
-  return cpf.toString().replace(/\D/g, '');
-}
-
 // 2. Save New Enrollment (Async to handle await getNewEnrollments)
 export async function saveNewEnrollment(enrollment) {
   ensureDataFolder();
@@ -58,24 +52,6 @@ export async function saveNewEnrollment(enrollment) {
   } catch (e) {
     console.warn('Could not save enrollment locally on read-only filesystem:', e.message);
   }
-}
-
-// 2b. Update Existing Enrollment locally
-export async function updateEnrollment(cpf, updatedFields) {
-  ensureDataFolder();
-  try {
-    const enrollments = await getNewEnrollments();
-    const cleanInputCpf = cleanCpf(cpf);
-    const index = enrollments.findIndex(e => cleanCpf(e.cpf_cursista) === cleanInputCpf);
-    if (index !== -1) {
-      enrollments[index] = { ...enrollments[index], ...updatedFields };
-      fs.writeFileSync(ENROLLMENTS_FILE, JSON.stringify(enrollments, null, 2));
-      return true;
-    }
-  } catch (e) {
-    console.warn('Could not update enrollment locally:', e.message);
-  }
-  return false;
 }
 
 // 3. Get Class Capacities (stored as classKey: capacity)
@@ -127,18 +103,11 @@ export async function getClasses() {
   // Load capacities config
   const capacitiesConfig = await getClassCapacities();
 
-  // Filter out duplicates in baseMatricula if the student has been updated/enrolled in newEnrollments
-  const newEnrollmentsCpfs = new Set(newEnrollments.map(e => cleanCpf(e.cpf_cursista)).filter(Boolean));
-  const activeBaseMatricula = baseMatricula.filter(student => {
-    const cpf = cleanCpf(student.cpf_cursista);
-    return !cpf || !newEnrollmentsCpfs.has(cpf);
-  });
-
   // We want to group by class (defined by component, class name, turno)
   const classesMap = {};
 
-  // Process already enrolled students from active base CSV list
-  activeBaseMatricula.forEach(student => {
+  // Process already enrolled students from base CSV
+  baseMatricula.forEach(student => {
     const comp = student.componente || '';
     const name = student.turma || '';
     const turno = student.turno || '';

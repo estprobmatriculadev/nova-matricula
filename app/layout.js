@@ -28,7 +28,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="pt-BR">
       <body>
-        <div className={`app-container ${isLoggedIn ? 'logged-in' : ''}`}>
+        <div className="app-container">
           {isLoggedIn && (
             <aside className="sidebar">
               <div style={{ marginBottom: '2.5rem' }}>
@@ -126,7 +126,7 @@ export default function RootLayout({ children }) {
             </aside>
           )}
 
-          <main className="main-content">
+          <main className="main-content" style={{ marginLeft: isLoggedIn ? '280px' : '0' }}>
             {children}
           </main>
         </div>

@@ -24,8 +24,6 @@ export default function CandidateDetailPage({ params }) {
   const [necessidadesEspecificas, setNecessidadesEspecificas] = useState([]);
   const [outrasNecessidades, setOutrasNecessidades] = useState('');
   const [fallbackWarning, setFallbackWarning] = useState('');
-  const [shiftFilter, setShiftFilter] = useState('ALL');
-  const [timeFilter, setTimeFilter] = useState('ALL');
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -53,21 +51,10 @@ export default function CandidateDetailPage({ params }) {
           throw new Error('Cursista não encontrado ou sem permissão de acesso.');
         }
         
-        if (cand.enrollmentInfo) {
-          setEmail(cand.enrollmentInfo.email || '');
-          setPhone(cand.enrollmentInfo.phone || '');
-          setSelectedClassKey(cand.enrollmentInfo.classKey || '');
-          setObsTutor(cand.enrollmentInfo.observacoes_tutor || '');
-          setPossuiAcessibilidade(cand.enrollmentInfo.possui_acessibilidade || 'NÃO');
-          setTipoDeficiencia(cand.enrollmentInfo.tipo_deficiencia ? cand.enrollmentInfo.tipo_deficiencia.split(', ').filter(Boolean) : []);
-          setNecessidadesEspecificas(cand.enrollmentInfo.necessidades_especificas ? cand.enrollmentInfo.necessidades_especificas.split(', ').filter(Boolean) : []);
-          setOutrasNecessidades(cand.enrollmentInfo.outras_necessidades || '');
-        } else {
-          // Auto-generate suggested email
-          if (cand.nome) {
-            const suggested = generateSuggestedEmail(cand.nome);
-            setEmail(suggested);
-          }
+        // Auto-generate suggested email
+        if (cand.nome) {
+          const suggested = generateSuggestedEmail(cand.nome);
+          setEmail(suggested);
         }
 
         setCandidate(cand);
@@ -81,8 +68,7 @@ export default function CandidateDetailPage({ params }) {
         const mappedComp = mapVagaToComponent(cand.vaga);
         
         let filteredDropdownClasses = allCls.filter(c => 
-          (normalizeString(c.componente) === normalizeString(mappedComp) && c.vacancies > 0) ||
-          (cand.enrollmentInfo && c.classKey === cand.enrollmentInfo.classKey)
+          normalizeString(c.componente) === normalizeString(mappedComp) && c.vacancies > 0
         );
 
         let fallbackMsg = '';
@@ -91,8 +77,7 @@ export default function CandidateDetailPage({ params }) {
         if (filteredDropdownClasses.length === 0) {
           const candArea = getAreaOfComponent(cand.vaga);
           filteredDropdownClasses = allCls.filter(c => 
-            (getAreaOfComponent(c.componente) === candArea && c.vacancies > 0) ||
-            (cand.enrollmentInfo && c.classKey === cand.enrollmentInfo.classKey)
+            getAreaOfComponent(c.componente) === candArea && c.vacancies > 0
           );
           if (filteredDropdownClasses.length > 0) {
             fallbackMsg = `Todas as turmas do componente de concurso (${cand.vaga}) estão lotadas. Exibindo turmas disponíveis da mesma área de conhecimento.`;
@@ -101,9 +86,7 @@ export default function CandidateDetailPage({ params }) {
 
         // If still empty, display all classes with vacancies as final fallback
         if (filteredDropdownClasses.length === 0) {
-          filteredDropdownClasses = allCls.filter(c => 
-            c.vacancies > 0 || (cand.enrollmentInfo && c.classKey === cand.enrollmentInfo.classKey)
-          );
+          filteredDropdownClasses = allCls.filter(c => c.vacancies > 0);
           if (filteredDropdownClasses.length > 0) {
             fallbackMsg = `Todas as turmas da área de conhecimento estão lotadas. Exibindo outras turmas disponíveis no sistema.`;
           }
@@ -266,35 +249,10 @@ export default function CandidateDetailPage({ params }) {
     );
   }
 
-  // Filter candidate-appropriate classes by user selected shift and time
-  const visibleClasses = classes.filter(cls => {
-    const matchesShift = shiftFilter === 'ALL' || normalizeString(cls.turno) === normalizeString(shiftFilter);
-    const classTimeStr = `${cls.horario_inicial} - ${cls.horario_fim}`;
-    const matchesTime = timeFilter === 'ALL' || classTimeStr === timeFilter;
-    return matchesShift && matchesTime;
-  });
-
-  // Unique shifts and times
-  const uniqueShifts = [...new Set(classes.map(c => c.turno))].filter(Boolean).sort();
-  const uniqueTimes = [...new Set(classes.map(c => `${c.horario_inicial} - ${c.horario_fim}`))].filter(Boolean).sort();
-
   // Pre-filter matching classes to highlight them in the dropdown
   const matchedComponent = mapVagaToComponent(candidate.vaga);
-  const matchedClasses = visibleClasses.filter(c => normalizeString(c.componente) === normalizeString(matchedComponent));
-  const otherClassesList = visibleClasses.filter(c => normalizeString(c.componente) !== normalizeString(matchedComponent));
-
-  useEffect(() => {
-    if (visibleClasses.length > 0) {
-      const isCurrentVisible = visibleClasses.some(c => c.classKey === selectedClassKey);
-      if (!isCurrentVisible) {
-        setSelectedClassKey(visibleClasses[0].classKey);
-      }
-    } else {
-      setSelectedClassKey('');
-    }
-  }, [shiftFilter, timeFilter, classes, selectedClassKey]);
-
-  const isEditMode = candidate?.status === 'ENROLLED';
+  const matchedClasses = classes.filter(c => normalizeString(c.componente) === normalizeString(matchedComponent));
+  const otherClassesList = classes.filter(c => normalizeString(c.componente) !== normalizeString(matchedComponent));
 
   return (
     <div className="animate-fade-in" style={{ maxWidth: '800px', margin: '0 auto' }}>
@@ -302,8 +260,8 @@ export default function CandidateDetailPage({ params }) {
         <Link href="/candidates" style={{ textDecoration: 'none', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: '600', fontSize: '0.9rem', marginBottom: '1rem' }}>
           ← Voltar para Lista
         </Link>
-        <h1>{isEditMode ? 'Editar Matrícula e Ensalamento' : 'Ensalar Novo Cursista'}</h1>
-        <p className="subtitle">{isEditMode ? 'Formulário de alteração de dados de matrícula e ensalamento.' : 'Formulário de preenchimento de dados de ensalamento e sincronização.'}</p>
+        <h1>Ensalar Novo Cursista</h1>
+        <p className="subtitle">Formulário de preenchimento de dados de ensalamento e sincronização.</p>
       </div>
 
       {success && (
@@ -318,9 +276,9 @@ export default function CandidateDetailPage({ params }) {
           fontWeight: '600'
         }}>
           {sheetsSynced ? (
-            isEditMode ? '🎉 Matrícula alterada com sucesso! Sincronizado com o Google Sheets. Redirecionando...' : '🎉 Matrícula realizada com sucesso! Sincronizado com o Google Sheets. Redirecionando...'
+            '🎉 Matrícula realizada com sucesso! Sincronizado com o Google Sheets. Redirecionando...'
           ) : (
-            isEditMode ? '⚠️ Matrícula alterada apenas localmente! O Google Sheets não está configurado. Redirecionando...' : '⚠️ Matrícula realizada apenas localmente! O Google Sheets não está configurado. Redirecionando...'
+            '⚠️ Matrícula realizada apenas localmente! O Google Sheets não está configurado na hospedagem. Redirecionando...'
           )}
         </div>
       )}
@@ -428,48 +386,6 @@ export default function CandidateDetailPage({ params }) {
                 ⚠️ {fallbackWarning}
               </div>
             )}
-            {/* Class Filters (Shift & Time) */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-              gap: '1rem',
-              marginBottom: '1rem',
-              marginTop: '0.75rem',
-              backgroundColor: 'rgba(255, 255, 255, 0.02)',
-              padding: '1rem',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-color)'
-            }}>
-              <div>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>Filtrar por Turno</label>
-                <select
-                  value={shiftFilter}
-                  onChange={(e) => setShiftFilter(e.target.value)}
-                  className="form-input"
-                  style={{ padding: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}
-                >
-                  <option value="ALL">Todos os Turnos</option>
-                  {uniqueShifts.map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="form-label" style={{ fontSize: '0.8rem' }}>Filtrar por Horário</label>
-                <select
-                  value={timeFilter}
-                  onChange={(e) => setTimeFilter(e.target.value)}
-                  className="form-input"
-                  style={{ padding: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}
-                >
-                  <option value="ALL">Todos os Horários</option>
-                  {uniqueTimes.map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
             <select
               value={selectedClassKey}
               onChange={(e) => setSelectedClassKey(e.target.value)}
@@ -478,15 +394,11 @@ export default function CandidateDetailPage({ params }) {
               style={{ cursor: 'pointer' }}
             >
               <option value="" disabled>-- Selecione uma turma --</option>
-              {visibleClasses.map(cls => {
-                const isCurrentClass = candidate?.enrollmentInfo && cls.classKey === candidate.enrollmentInfo.classKey;
-                const isLotada = cls.vacancies <= 0 && !isCurrentClass;
-                return (
-                  <option key={cls.classKey} value={cls.classKey} disabled={isLotada}>
-                    [{cls.componente}] {cls.turma} — {cls.dia_da_semana} ({cls.turno} - {cls.horario_inicial} às {cls.horario_fim}) [{cls.vacancies} vagas] {isLotada ? '(LOTADA)' : ''}
-                  </option>
-                );
-              })}
+              {classes.map(cls => (
+                <option key={cls.classKey} value={cls.classKey} disabled={cls.vacancies <= 0}>
+                  [{cls.componente}] {cls.turma} — {cls.dia_da_semana} ({cls.turno}) [{cls.vacancies} vagas] {cls.vacancies <= 0 ? '(LOTADA)' : ''}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -622,7 +534,7 @@ export default function CandidateDetailPage({ params }) {
             className="btn btn-secondary"
             style={{ minWidth: '180px' }}
           >
-            {submitting ? 'Gravando...' : (isEditMode ? 'Salvar Alterações' : 'Confirmar Ensalamento')}
+            {submitting ? 'Gravando...' : 'Confirmar Ensalamento'}
           </button>
         </div>
       </form>

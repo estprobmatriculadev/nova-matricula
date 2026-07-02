@@ -3,15 +3,6 @@ import { google } from 'googleapis';
 const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID || '19TpaU9BOA7SZ85cfLDs0AkW1_XhdoFssT1SXZIQrOus';
 const TAB_NAME = process.env.GOOGLE_SHEET_TAB_NAME || ''; // If empty, defaults to first tab
 
-// In-memory cache variables to optimize sheet fetch performance
-let enrollmentsCache = null;
-let enrollmentsCacheTime = 0;
-let capacitiesCache = null;
-let capacitiesCacheTime = 0;
-
-const CACHE_TTL_MS = 30000; // 30 seconds
-
-
 // Helper to check if credentials are configured
 export function isSheetsConfigured() {
   return !!(
@@ -177,16 +168,6 @@ export async function appendEnrollmentToSheets(student) {
       }
     });
 
-    // Proactively update in-memory cache if it exists
-    if (enrollmentsCache) {
-      const studentCopy = { ...student };
-      if (studentCopy.cpf_cursista) {
-        studentCopy.cpf_cursista = studentCopy.cpf_cursista.toString().replace(/\D/g, '');
-      }
-      enrollmentsCache.push(studentCopy);
-      enrollmentsCacheTime = Date.now();
-    }
-
     return { success: true, updatedCells: response.data.updates.updatedCells };
   } catch (error) {
     console.error('Error appending enrollment to Google Sheets:', error);
@@ -197,11 +178,6 @@ export async function appendEnrollmentToSheets(student) {
 export async function getEnrollmentsFromSheets() {
   if (!isSheetsConfigured()) {
     return [];
-  }
-  const now = Date.now();
-  if (enrollmentsCache && (now - enrollmentsCacheTime < CACHE_TTL_MS)) {
-    console.log('Returning enrollments from in-memory cache');
-    return enrollmentsCache;
   }
   try {
     const auth = getAuth(['https://www.googleapis.com/auth/spreadsheets.readonly']);
@@ -222,7 +198,7 @@ export async function getEnrollmentsFromSheets() {
     const studentRows = rows.slice(1);
 
     // Map rows back to objects matching schema
-    const data = studentRows.map(row => {
+    return studentRows.map(row => {
       const student = {};
       HEADERS_ORDER.forEach((header, index) => {
         student[header] = row[index] || '';
@@ -233,10 +209,6 @@ export async function getEnrollmentsFromSheets() {
       }
       return student;
     });
-
-    enrollmentsCache = data;
-    enrollmentsCacheTime = now;
-    return data;
   } catch (error) {
     console.error('Error fetching enrollments from Google Sheets:', error);
     return [];
@@ -246,11 +218,6 @@ export async function getEnrollmentsFromSheets() {
 export async function getCapacitiesFromSheets() {
   if (!isSheetsConfigured()) {
     return {};
-  }
-  const now = Date.now();
-  if (capacitiesCache && (now - capacitiesCacheTime < CACHE_TTL_MS)) {
-    console.log('Returning capacities from in-memory cache');
-    return capacitiesCache;
   }
   try {
     const auth = getAuth(['https://www.googleapis.com/auth/spreadsheets.readonly']);
@@ -275,9 +242,6 @@ export async function getCapacitiesFromSheets() {
         capacities[key] = cap;
       }
     });
-
-    capacitiesCache = capacities;
-    capacitiesCacheTime = now;
     return capacities;
   } catch (error) {
     // If sheet 'Capacidades' does not exist yet, catch and return empty config
@@ -332,96 +296,9 @@ export async function saveCapacityToSheets(classKey, capacity) {
         }
       });
     }
-
-    // Proactively update capacities cache
-    if (capacitiesCache) {
-      capacitiesCache[classKey] = capacity;
-      capacitiesCacheTime = Date.now();
-    }
-
     return { success: true };
   } catch (error) {
     console.error('Error saving class capacity to Google Sheets:', error);
-    return { success: false, error: error.message };
-  }
-}
-
-// Function to update an existing enrollment record in Google Sheets
-export async function updateEnrollmentInSheets(cpf, updatedStudent) {
-  if (!isSheetsConfigured()) {
-    return { success: false, reason: 'NOT_CONFIGURED' };
-  }
-  try {
-    const auth = getAuth(['https://www.googleapis.com/auth/spreadsheets']);
-    const sheets = google.sheets({ version: 'v4', auth });
-    
-    // Fetch all rows to find the matching one
-    const range = TAB_NAME ? `${TAB_NAME}!A:AL` : 'A:AL';
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range
-    });
-    
-    const rows = response.data.values;
-    if (!rows || rows.length <= 1) {
-      return { success: false, error: 'No data found in sheet' };
-    }
-    
-    const cpfColIndex = HEADERS_ORDER.indexOf('cpf_cursista');
-    const cleanInputCpf = cpf.toString().replace(/\D/g, '');
-    
-    const rowIndex = rows.findIndex((row, idx) => {
-      if (idx === 0) return false; // skip headers
-      const rowCpf = row[cpfColIndex] ? row[cpfColIndex].toString().replace(/\D/g, '') : '';
-      return rowCpf === cleanInputCpf;
-    });
-    
-    if (rowIndex === -1) {
-      // If not found in sheets, it might be a base cursista that now needs to be appended
-      return await appendEnrollmentToSheets(updatedStudent);
-    }
-    
-    // Map student object to ordered array of values
-    const rowValues = HEADERS_ORDER.map(header => {
-      if (header === 'Link Classroom') {
-        return updatedStudent['Link Classroom'] || updatedStudent['Link_Classroom'] || '';
-      }
-      if (header === 'e-mail_formador') {
-        return updatedStudent['e-mail_formador'] || updatedStudent['email_formador'] || '';
-      }
-      if (header === 'e-mail_nre') {
-        return updatedStudent['e-mail_nre'] || updatedStudent['email_nre'] || '';
-      }
-      return updatedStudent[header] !== undefined ? updatedStudent[header] : (rows[rowIndex][HEADERS_ORDER.indexOf(header)] || '');
-    });
-    
-    // Google Sheets row is 1-indexed
-    const updateRange = TAB_NAME ? `${TAB_NAME}!A${rowIndex + 1}:AL${rowIndex + 1}` : `A${rowIndex + 1}:AL${rowIndex + 1}`;
-    
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SPREADSHEET_ID,
-      range: updateRange,
-      valueInputOption: 'USER_ENTERED',
-      requestBody: {
-        values: [rowValues]
-      }
-    });
-    
-    // Proactively update in-memory cache if it exists
-    if (enrollmentsCache) {
-      const cacheIdx = enrollmentsCache.findIndex(e => e.cpf_cursista && e.cpf_cursista.toString().replace(/\D/g, '') === cleanInputCpf);
-      if (cacheIdx !== -1) {
-        enrollmentsCache[cacheIdx] = { ...enrollmentsCache[cacheIdx], ...updatedStudent };
-      } else {
-        // If not in cache, clear cache to force reload
-        enrollmentsCache = null;
-        enrollmentsCacheTime = 0;
-      }
-    }
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Error updating enrollment in Google Sheets:', error);
     return { success: false, error: error.message };
   }
 }

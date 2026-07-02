@@ -61,30 +61,10 @@ export async function GET(request) {
       .map(c => {
         const cpfClean = cleanCpf(c.cpf);
         const isEnrolled = enrolledCpfs.has(cpfClean);
-        
-        let enrollmentInfo = null;
-        if (isEnrolled) {
-          const matchingDetail = newEnrollments.find(e => cleanCpf(e.cpf_cursista) === cpfClean) ||
-                                 baseMatricula.find(e => cleanCpf(e.cpf_cursista) === cpfClean);
-          if (matchingDetail) {
-            enrollmentInfo = {
-              email: matchingDetail['e-mail'] || matchingDetail.email || '',
-              phone: matchingDetail.telefone_cursista || matchingDetail.phone || matchingDetail.telefone || '',
-              classKey: `${normalizeString(matchingDetail.componente)}|${normalizeString(matchingDetail.turma)}|${normalizeString(matchingDetail.turno)}`,
-              possui_acessibilidade: matchingDetail.possui_acessibilidade || 'NÃO',
-              tipo_deficiencia: matchingDetail.tipo_deficiencia || '',
-              necessidades_especificas: matchingDetail.necessidades_especificas || '',
-              outras_necessidades: matchingDetail.outras_necessidades || '',
-              observacoes_tutor: matchingDetail.observacoes_tutor || ''
-            };
-          }
-        }
-
         return {
           ...c,
           cleanCpf: cpfClean,
-          status: isEnrolled ? 'ENROLLED' : 'PENDING',
-          enrollmentInfo
+          status: isEnrolled ? 'ENROLLED' : 'PENDING'
         };
       });
 

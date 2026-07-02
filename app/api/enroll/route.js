@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { parseNomeados, parseMatricula, normalizeString } from '../../lib/csvParser';
-import { getClasses, saveNewEnrollment, updateEnrollment, getNewEnrollments } from '../../lib/db';
-import { appendEnrollmentToSheets, updateEnrollmentInSheets, isSheetsConfigured } from '../../lib/googleSheets';
+import { parseNomeados, normalizeString } from '../../lib/csvParser';
+import { getClasses, saveNewEnrollment } from '../../lib/db';
+import { appendEnrollmentToSheets, isSheetsConfigured } from '../../lib/googleSheets';
 
 // Helper to normalize CPF
 function cleanCpf(cpf) {
@@ -61,26 +61,6 @@ export async function POST(request) {
 
     const cleanInputCpf = cleanCpf(cpf);
 
-    // Check if candidate is already enrolled (for update validation)
-    const baseMatricula = parseMatricula();
-    const newEnrollments = await getNewEnrollments();
-    
-    const enrolledCpfs = new Set();
-    baseMatricula.forEach(student => {
-      const cpf = cleanCpf(student.cpf_cursista);
-      if (cpf) enrolledCpfs.add(cpf);
-    });
-    newEnrollments.forEach(student => {
-      const cpf = cleanCpf(student.cpf_cursista);
-      if (cpf) enrolledCpfs.add(cpf);
-    });
-
-    const isUpdate = enrolledCpfs.has(cleanInputCpf);
-
-    if (isUpdate && session.role !== 'admin') {
-      return NextResponse.json({ error: 'Acesso negado. Apenas administradores podem alterar matrículas existentes.' }, { status: 403 });
-    }
-
     // 1. Fetch Candidate Details
     const candidates = parseNomeados();
     const candidate = candidates.find(c => cleanCpf(c.cpf) === cleanInputCpf);
@@ -102,19 +82,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Turma selecionada não encontrada.' }, { status: 404 });
     }
 
-    let isClassChanged = true;
-    if (isUpdate) {
-      const currentEnrollment = newEnrollments.find(e => cleanCpf(e.cpf_cursista) === cleanInputCpf) ||
-                                baseMatricula.find(e => cleanCpf(e.cpf_cursista) === cleanInputCpf);
-      if (currentEnrollment) {
-        const currentClassKey = `${normalizeString(currentEnrollment.componente)}|${normalizeString(currentEnrollment.turma)}|${normalizeString(currentEnrollment.turno)}`;
-        if (currentClassKey === classKey) {
-          isClassChanged = false;
-        }
-      }
-    }
-
-    if (isClassChanged && targetClass.vacancies <= 0) {
+    if (targetClass.vacancies <= 0) {
       return NextResponse.json({ error: 'Turma lotada. Não há vagas disponíveis.' }, { status: 409 });
     }
 
@@ -179,21 +147,10 @@ export async function POST(request) {
     };
 
     // 5. Save locally
-    let savedLocal = false;
-    if (isUpdate) {
-      savedLocal = await updateEnrollment(cleanInputCpf, enrollmentRecord);
-    }
-    if (!savedLocal) {
-      await saveNewEnrollment(enrollmentRecord);
-    }
+    await saveNewEnrollment(enrollmentRecord);
 
-    // 6. Sync with Google Sheets (if configured)
-    let sheetsResult;
-    if (isUpdate) {
-      sheetsResult = await updateEnrollmentInSheets(cleanInputCpf, enrollmentRecord);
-    } else {
-      sheetsResult = await appendEnrollmentToSheets(enrollmentRecord);
-    }
+    // 6. Append to Google Sheets (if configured)
+    const sheetsResult = await appendEnrollmentToSheets(enrollmentRecord);
 
     if (isSheetsConfigured() && !sheetsResult.success) {
       return NextResponse.json({ 

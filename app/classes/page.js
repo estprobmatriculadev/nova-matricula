@@ -43,9 +43,6 @@ export default function ClassesPage() {
   useEffect(() => {
     let result = [...classes];
 
-    // Filter out classes without vacancies (Problem 6)
-    result = result.filter(c => c.vacancies > 0);
-
     // Component filter
     if (componentFilter !== 'ALL') {
       result = result.filter(c => c.componente === componentFilter);

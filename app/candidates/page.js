@@ -255,27 +255,15 @@ export default function CandidatesPage() {
                           ✍️ Ensalar
                         </Link>
                       ) : (
-                        tutorRole === 'admin' ? (
-                          <Link href={`/candidates/${c.cleanCpf}`} className="btn btn-secondary" style={{
-                            padding: '0.4rem 0.8rem',
-                            fontSize: '0.8rem',
-                            borderRadius: '6px',
-                            backgroundColor: 'var(--secondary)',
-                            color: '#ffffff'
-                          }}>
-                            ✏️ Editar
-                          </Link>
-                        ) : (
-                          <button disabled className="btn btn-outline" style={{
-                            padding: '0.4rem 0.8rem',
-                            fontSize: '0.8rem',
-                            borderRadius: '6px',
-                            borderColor: '#d1d5db',
-                            color: '#9ca3af'
-                          }}>
-                            ✔ Completo
-                          </button>
-                        )
+                        <button disabled className="btn btn-outline" style={{
+                          padding: '0.4rem 0.8rem',
+                          fontSize: '0.8rem',
+                          borderRadius: '6px',
+                          borderColor: '#d1d5db',
+                          color: '#9ca3af'
+                        }}>
+                          ✔ Completo
+                        </button>
                       )}
                     </td>
                   </tr>
