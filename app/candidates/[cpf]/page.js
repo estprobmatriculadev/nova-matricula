@@ -30,6 +30,7 @@ export default function CandidateDetailPage({ params }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [sheetsSynced, setSheetsSynced] = useState(true);
+  const [formScheduleFilter, setFormScheduleFilter] = useState('ALL');
 
   useEffect(() => {
     async function loadData() {
@@ -106,6 +107,25 @@ export default function CandidateDetailPage({ params }) {
     }
     loadData();
   }, [cpf]);
+
+  // Automatically adjust selected class if current selection is filtered out by schedule selection
+  useEffect(() => {
+    // Filter dropdown options based on the selected schedule
+    const visibleClasses = classes.filter(c => {
+      if (formScheduleFilter === 'ALL') return true;
+      const key = `${c.dia_da_semana}|${c.horario_inicial}|${c.horario_fim}`;
+      return key === formScheduleFilter;
+    });
+
+    if (visibleClasses.length > 0) {
+      const isStillVisible = visibleClasses.some(c => c.classKey === selectedClassKey);
+      if (!isStillVisible) {
+        setSelectedClassKey(visibleClasses[0].classKey);
+      }
+    } else {
+      setSelectedClassKey('');
+    }
+  }, [formScheduleFilter, classes, selectedClassKey]);
 
   // Helper to normalize string for matching
   function normalizeString(str) {
@@ -254,9 +274,6 @@ export default function CandidateDetailPage({ params }) {
   const matchedClasses = classes.filter(c => normalizeString(c.componente) === normalizeString(matchedComponent));
   const otherClassesList = classes.filter(c => normalizeString(c.componente) !== normalizeString(matchedComponent));
 
-  // Schedule filtering in detail form
-  const [formScheduleFilter, setFormScheduleFilter] = useState('ALL');
-
   // Build unique schedules for the component classes
   const availableSchedules = [
     ...new Map(
@@ -274,18 +291,6 @@ export default function CandidateDetailPage({ params }) {
     const key = `${c.dia_da_semana}|${c.horario_inicial}|${c.horario_fim}`;
     return key === formScheduleFilter;
   });
-
-  // Automatically adjust selected class if current selection is filtered out
-  useEffect(() => {
-    if (visibleClasses.length > 0) {
-      const isStillVisible = visibleClasses.some(c => c.classKey === selectedClassKey);
-      if (!isStillVisible) {
-        setSelectedClassKey(visibleClasses[0].classKey);
-      }
-    } else {
-      setSelectedClassKey('');
-    }
-  }, [formScheduleFilter, classes]);
 
   return (
     <div className="animate-fade-in" style={{ maxWidth: '800px', margin: '0 auto' }}>
