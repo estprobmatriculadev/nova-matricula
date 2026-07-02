@@ -154,13 +154,11 @@ export default function DashboardPage() {
   // Admin simulated tutor/NRE view state
   const [selectedNre, setSelectedNre] = useState('ALL');
 
-  // Change-class states for admin alerts
-  const [allClasses, setAllClasses] = useState([]);
-  const [changeModal, setChangeModal] = useState(null);
-  const [newClassKey, setNewClassKey] = useState('');
-  const [changing, setChanging] = useState(false);
-  const [changeError, setChangeError] = useState('');
-  const [changeSuccess, setChangeSuccess] = useState('');
+  // Release states for admin alerts (manual modality change)
+  const [releaseConfirmModal, setReleaseConfirmModal] = useState(null);
+  const [releasing, setReleasing] = useState(false);
+  const [releaseError, setReleaseError] = useState('');
+  const [releaseSuccess, setReleaseSuccess] = useState('');
 
   // Reset state (admin only)
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -179,9 +177,6 @@ export default function DashboardPage() {
       }
       const jsonData = await res.json();
       setData(jsonData);
-      const nreCls = jsonData.classes?.nreClasses || [];
-      const otherCls = jsonData.classes?.otherClasses || [];
-      setAllClasses([...nreCls, ...otherCls]);
 
       const recentRes = await fetch('/api/recent-enrollments');
       if (recentRes.ok) {
@@ -195,62 +190,51 @@ export default function DashboardPage() {
     }
   }
 
-  function openChangeModal(alertRecord) {
-    const cleanCpf = (alertRecord.cpf_cursista || '').toString().replace(/\D/g, '');
-    const candAdapter = {
-      nome: alertRecord.nome_cursista,
-      cpf: alertRecord.cpf_cursista,
-      cleanCpf: cleanCpf,
-      vaga: alertRecord.componente
-    };
-    setChangeModal({ candidate: candAdapter });
-    setNewClassKey('');
-    setChangeError('');
-    setChangeSuccess('');
+  function openReleaseModal(alertRecord) {
+    setReleaseConfirmModal(alertRecord);
+    setReleaseError('');
+    setReleaseSuccess('');
   }
 
-  function closeChangeModal() {
-    setChangeModal(null);
-    setChangeError('');
-    setChangeSuccess('');
+  function closeReleaseModal() {
+    setReleaseConfirmModal(null);
+    setReleaseError('');
+    setReleaseSuccess('');
   }
 
-  async function handleChangeClass() {
-    if (!newClassKey) {
-      setChangeError('Selecione uma turma de destino.');
-      return;
-    }
-    setChanging(true);
-    setChangeError('');
-    setChangeSuccess('');
+  async function handleConfirmRelease() {
+    if (!releaseConfirmModal) return;
+    setReleasing(true);
+    setReleaseError('');
+    setReleaseSuccess('');
 
     try {
-      const res = await fetch('/api/change-class', {
+      const res = await fetch('/api/request-transfer/release', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          cpf: changeModal.candidate.cleanCpf,
-          vaga: changeModal.candidate.vaga,
-          newClassKey,
+          cpf: releaseConfirmModal.cpf_cursista,
+          componente: releaseConfirmModal.componente,
         }),
       });
+
       const resData = await res.json();
       if (res.ok && resData.success) {
-        setChangeSuccess(`✅ ${resData.message}`);
+        setReleaseSuccess('✅ Vaga liberada com sucesso!');
         await loadData();
-        setTimeout(closeChangeModal, 2000);
+        setTimeout(closeReleaseModal, 2000);
       } else {
-        setChangeError(resData.error || 'Erro ao alterar a turma.');
+        setReleaseError(resData.error || 'Erro ao liberar vaga.');
       }
     } catch (e) {
-      setChangeError('Erro na conexão com o servidor.');
+      setReleaseError('Erro na conexão com o servidor.');
     } finally {
-      setChanging(false);
+      setReleasing(false);
     }
   }
 
   async function handleResolveAlert(cpf, componente) {
-    if (!confirm('Deseja realmente ignorar/arquivar este alerta?')) return;
+    if (!confirm('Deseja realmente arquivar este alerta sem liberar a vaga?')) return;
     try {
       const res = await fetch('/api/request-transfer/resolve', {
         method: 'POST',
@@ -467,20 +451,20 @@ export default function DashboardPage() {
                     Solicitado por {alert.transferRequest.requestedBy} em {new Date(alert.transferRequest.requestedAt).toLocaleString('pt-BR')}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
                   <button
-                    onClick={() => openChangeModal(alert)}
+                    onClick={() => openReleaseModal(alert)}
                     className="btn btn-secondary"
-                    style={{ padding: '0.45rem 0.75rem', fontSize: '0.8rem', borderRadius: '6px', flex: 1 }}
+                    style={{ padding: '0.5rem', fontSize: '0.82rem', borderRadius: '6px', width: '100%', fontWeight: '600' }}
                   >
-                    🔄 Alterar Turma
+                    ✅ Concluir Troca e Liberar Vaga
                   </button>
                   <button
                     onClick={() => handleResolveAlert(alert.cpf_cursista, alert.componente)}
                     className="btn btn-outline"
-                    style={{ padding: '0.45rem 0.75rem', fontSize: '0.8rem', borderRadius: '6px', borderColor: 'var(--border-color)', color: 'var(--text-muted)' }}
+                    style={{ padding: '0.4rem', fontSize: '0.8rem', borderRadius: '6px', borderColor: 'var(--border-color)', color: 'var(--text-muted)' }}
                   >
-                    Ignorar
+                    Ignorar Alerta
                   </button>
                 </div>
               </div>
@@ -799,22 +783,22 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* ---- Change Class Modal (para Alertas de Admin) ---- */}
-      {changeModal && (
-        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && closeChangeModal()}>
-          <div className="modal-box">
+      {/* ---- Release Vacancy Confirmation Modal ---- */}
+      {releaseConfirmModal && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && closeReleaseModal()}>
+          <div className="modal-box" style={{ maxWidth: '440px' }}>
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
               <div>
-                <h2 style={{ fontSize: '1.25rem' }}>🔄 Alterar Turma (Alerta de Transferência)</h2>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                  Selecione o novo horário de <strong>{changeModal.candidate.nome}</strong>.
+                <h2 style={{ fontSize: '1.2rem', color: 'var(--text-main)' }}>⚠️ Confirmar Liberação de Vaga</h2>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                  Verificação de enturmação manual na planilha.
                 </p>
               </div>
-              <button onClick={closeChangeModal} className="btn-close" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: 'var(--text-muted)' }}>✕</button>
+              <button onClick={closeReleaseModal} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: 'var(--text-muted)' }}>✕</button>
             </div>
 
-            {/* Info */}
+            {/* Info details */}
             <div style={{
               backgroundColor: 'rgba(255, 255, 255, 0.02)',
               border: '1px solid var(--border-color)',
@@ -822,91 +806,73 @@ export default function DashboardPage() {
               padding: '0.75rem 1rem',
               marginBottom: '1.25rem',
               fontSize: '0.85rem',
+              lineHeight: '1.4'
             }}>
-              <div><strong>Cursista:</strong> {changeModal.candidate.nome}</div>
-              <div><strong>CPF:</strong> {changeModal.candidate.cpf}</div>
-              <div><strong>Vaga Original:</strong> {changeModal.candidate.vaga}</div>
+              <div><strong>Cursista:</strong> {releaseConfirmModal.nome_cursista}</div>
+              <div><strong>Vaga Original:</strong> {releaseConfirmModal.componente}</div>
+              <div><strong>Turma Anterior no Portal:</strong> {releaseConfirmModal.turma}</div>
+              <div><strong>Modalidade/Turno Pretendidos:</strong> <span style={{ color: 'var(--secondary)', fontWeight: '600' }}>{releaseConfirmModal.transferRequest.requestedModality}</span> ({releaseConfirmModal.transferRequest.requestedShift})</div>
             </div>
 
-            {/* Aviso informativo de remanejamento */}
+            {/* Question */}
             <div style={{
-              backgroundColor: 'rgba(9, 105, 178, 0.06)',
-              border: '1px solid var(--border-color)',
+              backgroundColor: 'rgba(249, 115, 22, 0.06)',
+              border: '1px solid rgba(249, 115, 22, 0.15)',
               borderRadius: 'var(--radius-sm)',
-              padding: '0.75rem 1rem',
-              marginBottom: '1.25rem',
-              fontSize: '0.82rem',
-              color: 'var(--text-main)',
-              fontWeight: '500',
+              padding: '1rem',
+              marginBottom: '1.5rem',
+              textAlign: 'center'
             }}>
-              💡 Ao confirmar, a turma antiga será liberada e o cursista será matriculado no novo horário em tempo real. O alerta será resolvido automaticamente.
-            </div>
-
-            {/* New class select */}
-            <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-              <label className="form-label">Selecionar nova turma *</label>
-              <select
-                value={newClassKey}
-                onChange={(e) => setNewClassKey(e.target.value)}
-                className="form-input"
-                style={{ cursor: 'pointer' }}
-              >
-                <option value="">-- Selecione uma turma com vagas --</option>
-                {availableClasses.map(cls => (
-                  <option key={cls.classKey} value={cls.classKey}>
-                    [{cls.componente}] {cls.turma} — {cls.dia_da_semana} {cls.horario_inicial}–{cls.horario_fim} [{cls.vacancies} vaga{cls.vacancies !== 1 ? 's' : ''}]
-                  </option>
-                ))}
-              </select>
-              {availableClasses.length === 0 && (
-                <p style={{ fontSize: '0.8rem', color: 'var(--error)', marginTop: '0.4rem' }}>
-                  Nenhuma turma com vagas disponíveis para este componente no momento.
-                </p>
-              )}
+              <p style={{ fontWeight: '700', fontSize: '0.95rem', color: 'var(--text-main)', marginBottom: '0.5rem' }}>
+                A alteração foi atualizada na planilha com a turma nova?
+              </p>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                Ao confirmar, a vaga que estava garantida na turma anterior ({releaseConfirmModal.turma}) será liberada novamente no sistema.
+              </p>
             </div>
 
             {/* Feedback messages */}
-            {changeError && (
+            {releaseError && (
               <div style={{
                 backgroundColor: 'rgba(239, 68, 68, 0.08)',
                 border: '1px solid rgba(239, 68, 68, 0.2)',
                 color: 'var(--error)',
-                padding: '0.75rem 1rem',
+                padding: '0.75rem',
                 borderRadius: 'var(--radius-sm)',
                 fontSize: '0.85rem',
-                fontWeight: '500',
                 marginBottom: '1rem',
+                fontWeight: '500'
               }}>
-                ⚠️ {changeError}
+                ⚠️ {releaseError}
               </div>
             )}
-            {changeSuccess && (
+            {releaseSuccess && (
               <div style={{
                 backgroundColor: 'rgba(16, 185, 129, 0.08)',
                 border: '1px solid rgba(16, 185, 129, 0.2)',
                 color: 'var(--success)',
-                padding: '0.75rem 1rem',
+                padding: '0.75rem',
                 borderRadius: 'var(--radius-sm)',
                 fontSize: '0.85rem',
-                fontWeight: '600',
                 marginBottom: '1rem',
+                fontWeight: '600'
               }}>
-                {changeSuccess}
+                {releaseSuccess}
               </div>
             )}
 
             {/* Actions */}
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-              <button onClick={closeChangeModal} className="btn btn-outline" disabled={changing}>
-                Cancelar
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+              <button onClick={closeReleaseModal} className="btn btn-outline" disabled={releasing}>
+                Não, Cancelar
               </button>
               <button
-                onClick={handleChangeClass}
+                onClick={handleConfirmRelease}
                 className="btn btn-secondary"
-                disabled={changing || !newClassKey || !!changeSuccess}
-                style={{ minWidth: '160px' }}
+                disabled={releasing || !!releaseSuccess}
+                style={{ minWidth: '180px' }}
               >
-                {changing ? 'Salvando...' : '🔄 Confirmar Alteração'}
+                {releasing ? 'Liberando...' : 'Sim, Liberar Vaga'}
               </button>
             </div>
           </div>
