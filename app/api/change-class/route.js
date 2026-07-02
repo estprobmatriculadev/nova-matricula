@@ -1,7 +1,27 @@
 import { NextResponse } from 'next/server';
 import { getClasses } from '../../lib/db';
 import { updateEnrollmentInFirestore, saveEnrollmentToFirestore, getEnrollmentsFromFirestore } from '../../lib/firebaseDb';
-import { parseMatricula } from '../../lib/csvParser';
+import { parseMatricula, normalizeString } from '../../lib/csvParser';
+
+// Map candidate "VAGA" from Nomeados CSV to classroom "COMPONENTE"
+function mapVagaToComponent(vaga) {
+  const v = (vaga || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+  if (v.includes('MATEMATICA')) return 'MATEMATICA';
+  if (v.includes('PORTUGUES') || v.includes('LINGUA PORTUGUESA')) return 'PORTUGUES';
+  if (v.includes('INGLES') || v.includes('LINGUA ESTRANGEIRA') || v.includes('INGL')) return 'INGLES';
+  if (v.includes('EDUCACAO FISICA') || v.includes('E FISIC')) return 'EDUCACAO FISICA';
+  if (v.includes('ARTE')) return 'ARTE';
+  if (v.includes('CIENCIAS')) return 'CIENCIAS';
+  if (v.includes('BIOLOGIA')) return 'BIOLOGIA';
+  if (v.includes('GEOGRAFIA')) return 'GEOGRAFIA';
+  if (v.includes('HISTORIA')) return 'HISTORIA';
+  if (v.includes('SOCIOLOGIA')) return 'SOCIOLOGIA';
+  if (v.includes('FILOSOFIA')) return 'FILOSOFIA';
+  if (v.includes('QUIMICA')) return 'QUIMICA';
+  if (v.includes('FISICA')) return 'FISICA';
+  if (v.includes('PEDAGOGO') || v.includes('EQ GESTORA')) return 'EQ GESTORA';
+  return vaga; // fallback
+}
 
 export async function POST(request) {
   try {
@@ -15,18 +35,21 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Acesso negado. Apenas administradores podem alterar turmas.' }, { status: 403 });
     }
 
-    const { cpf, newClassKey } = await request.json();
-    if (!cpf || !newClassKey) {
-      return NextResponse.json({ error: 'CPF e nova turma são obrigatórios.' }, { status: 400 });
+    const { cpf, vaga, newClassKey } = await request.json();
+    if (!cpf || !vaga || !newClassKey) {
+      return NextResponse.json({ error: 'CPF, vaga e nova turma são obrigatórios.' }, { status: 400 });
     }
 
     const cleanCpf = cpf.toString().replace(/\D/g, '');
+    const targetComp = normalizeString(mapVagaToComponent(vaga));
 
-    // 1. Busca nas matrículas dinâmicas do Firestore
+    // 1. Busca nas matrículas dinâmicas do Firestore (CPF + Componente correspondente)
     const enrollments = await getEnrollmentsFromFirestore();
-    let existing = enrollments.find(e =>
-      (e.cpf_cursista || '').toString().replace(/\D/g, '') === cleanCpf
-    );
+    let existing = enrollments.find(e => {
+      const eCpf = (e.cpf_cursista || '').toString().replace(/\D/g, '');
+      const eComp = normalizeString(e.componente);
+      return eCpf === cleanCpf && eComp === targetComp;
+    });
 
     let baseRecord = null;
 
@@ -35,12 +58,13 @@ export async function POST(request) {
       const baseMatricula = parseMatricula();
       baseRecord = baseMatricula.find(e => {
         const baseCpf = (e.cpf_cursista || e.cpf || '').toString().replace(/\D/g, '');
-        return baseCpf === cleanCpf;
+        const baseComp = normalizeString(e.componente);
+        return baseCpf === cleanCpf && baseComp === targetComp;
       });
 
       if (!baseRecord) {
         return NextResponse.json({
-          error: 'Cursista não encontrado nos registros do portal nem na planilha base.'
+          error: 'Matrícula do cursista correspondente a este cargo/vaga não foi encontrada nos registros.'
         }, { status: 404 });
       }
     }
@@ -60,7 +84,7 @@ export async function POST(request) {
 
     if (existing) {
       // Caso 1: Já está no Firestore (atualiza campos de turma)
-      result = await updateEnrollmentInFirestore(cleanCpf, {
+      result = await updateEnrollmentInFirestore(cleanCpf, targetComp, {
         componente:      targetClass.componente,
         turma:           targetClass.turma,
         dia_da_semana:   targetClass.dia_da_semana,

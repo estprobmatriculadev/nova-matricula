@@ -68,9 +68,11 @@ export function parseNomeados() {
       trim: true
     });
 
-    return records.map(r => ({
-      nre: r.NRE || '',
-      vaga: r.VAGA || '',
+    return records
+      .filter(r => (r.NOME || '').trim() !== '' && (r.CPF || '').trim() !== '')
+      .map(r => ({
+        nre: r.NRE || '',
+        vaga: r.VAGA || '',
       nome: r.NOME || '',
       insc: r.INSC || '',
       class: r.CLASS || '',

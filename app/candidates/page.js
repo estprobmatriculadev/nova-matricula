@@ -111,6 +111,7 @@ export default function CandidatesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cpf: changeModal.candidate.cleanCpf,
+          vaga: changeModal.candidate.vaga,
           newClassKey,
         }),
       });
@@ -269,7 +270,7 @@ export default function CandidatesPage() {
               </thead>
               <tbody>
                 {filteredCandidates.map((c) => (
-                  <tr key={c.cleanCpf}>
+                  <tr key={`${c.cleanCpf}_${c.vaga}`}>
                     <td style={{ fontWeight: '600' }}>{c.nome}</td>
                     <td style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>{formatCpf(c.cpf)}</td>
                     <td style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>{c.rg}</td>
@@ -293,7 +294,7 @@ export default function CandidatesPage() {
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       {c.status === 'PENDING' ? (
-                        <Link href={`/candidates/${c.cleanCpf}`} className="btn btn-secondary" style={{
+                        <Link href={`/candidates/${c.cleanCpf}?vaga=${encodeURIComponent(c.vaga)}`} className="btn btn-secondary" style={{
                           padding: '0.4rem 0.8rem',
                           fontSize: '0.8rem',
                           borderRadius: '6px'

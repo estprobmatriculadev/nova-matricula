@@ -31,7 +31,7 @@ export async function getEnrollmentsFromFirestore() {
 
 /**
  * Salva uma nova matrícula.
- * Usa o CPF como ID do documento — garante unicidade.
+ * Usa a combinação de CPF + Componente como ID do documento para permitir múltiplos vínculos por CPF.
  */
 export async function saveEnrollmentToFirestore(enrollment) {
   try {
@@ -39,7 +39,10 @@ export async function saveEnrollmentToFirestore(enrollment) {
     const cpf = (enrollment.cpf_cursista || '').toString().replace(/\D/g, '');
     if (!cpf) throw new Error('CPF inválido para salvar no Firestore.');
 
-    await db.collection('enrollments').doc(cpf).set({
+    const compKey = (enrollment.componente || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+    const docId = `${cpf}_${compKey}`;
+
+    await db.collection('enrollments').doc(docId).set({
       ...enrollment,
       _createdAt: new Date().toISOString(),
     });
@@ -53,11 +56,13 @@ export async function saveEnrollmentToFirestore(enrollment) {
 /**
  * Atualiza campos de uma matrícula existente (usado no remanejamento de turma).
  */
-export async function updateEnrollmentInFirestore(cpf, updates) {
+export async function updateEnrollmentInFirestore(cpf, componente, updates) {
   try {
     const db = getFirestore();
     const cleanCpf = cpf.toString().replace(/\D/g, '');
-    const ref = db.collection('enrollments').doc(cleanCpf);
+    const compKey = (componente || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+    const docId = `${cleanCpf}_${compKey}`;
+    const ref = db.collection('enrollments').doc(docId);
 
     const doc = await ref.get();
     if (!doc.exists) {

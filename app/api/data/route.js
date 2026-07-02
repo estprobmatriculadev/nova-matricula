@@ -9,6 +9,26 @@ function cleanCpf(cpf) {
   return cpf.toString().replace(/\D/g, '');
 }
 
+// Map candidate "VAGA" from Nomeados CSV to classroom "COMPONENTE"
+function mapVagaToComponent(vaga) {
+  const v = (vaga || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+  if (v.includes('MATEMATICA')) return 'MATEMATICA';
+  if (v.includes('PORTUGUES') || v.includes('LINGUA PORTUGUESA')) return 'PORTUGUES';
+  if (v.includes('INGLES') || v.includes('LINGUA ESTRANGEIRA') || v.includes('INGL')) return 'INGLES';
+  if (v.includes('EDUCACAO FISICA') || v.includes('E FISIC')) return 'EDUCACAO FISICA';
+  if (v.includes('ARTE')) return 'ARTE';
+  if (v.includes('CIENCIAS')) return 'CIENCIAS';
+  if (v.includes('BIOLOGIA')) return 'BIOLOGIA';
+  if (v.includes('GEOGRAFIA')) return 'GEOGRAFIA';
+  if (v.includes('HISTORIA')) return 'HISTORIA';
+  if (v.includes('SOCIOLOGIA')) return 'SOCIOLOGIA';
+  if (v.includes('FILOSOFIA')) return 'FILOSOFIA';
+  if (v.includes('QUIMICA')) return 'QUIMICA';
+  if (v.includes('FISICA')) return 'FISICA';
+  if (v.includes('PEDAGOGO') || v.includes('EQ GESTORA')) return 'EQ GESTORA';
+  return vaga; // fallback
+}
+
 export async function GET(request) {
   try {
     // Get tutor_session cookie
@@ -44,15 +64,17 @@ export async function GET(request) {
     const baseMatricula = parseMatricula();
     const newEnrollments = await getNewEnrollments();
 
-    // Build a set of clean CPFs of already enrolled students
-    const enrolledCpfs = new Set();
+    // Build a set of clean "CPF_Componente" strings of already enrolled students to support multiple contracts
+    const enrolledVias = new Set();
     baseMatricula.forEach(student => {
       const cpf = cleanCpf(student.cpf_cursista);
-      if (cpf) enrolledCpfs.add(cpf);
+      const comp = normalizeString(student.componente);
+      if (cpf && comp) enrolledVias.add(`${cpf}_${comp}`);
     });
     newEnrollments.forEach(student => {
       const cpf = cleanCpf(student.cpf_cursista);
-      if (cpf) enrolledCpfs.add(cpf);
+      const comp = normalizeString(student.componente);
+      if (cpf && comp) enrolledVias.add(`${cpf}_${comp}`);
     });
 
     // Filter candidates by NRE
@@ -60,7 +82,8 @@ export async function GET(request) {
       .filter(c => !filterByNre || normalizeString(c.nre) === normalizedTutorNre)
       .map(c => {
         const cpfClean = cleanCpf(c.cpf);
-        const isEnrolled = enrolledCpfs.has(cpfClean);
+        const compMapped = normalizeString(mapVagaToComponent(c.vaga));
+        const isEnrolled = enrolledVias.has(`${cpfClean}_${compMapped}`);
         return {
           ...c,
           cleanCpf: cpfClean,

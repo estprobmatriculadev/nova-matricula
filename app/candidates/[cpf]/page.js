@@ -46,8 +46,15 @@ export default function CandidateDetailPage({ params }) {
         const data = await res.json();
         setTutorNre(data.tutorInfo?.nre || '');
 
-        // Find candidate
-        const cand = data.candidates.find(c => c.cleanCpf === cpf);
+        // Extract vaga from query param to support dual contracts
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetVaga = urlParams.get('vaga') || '';
+
+        // Find candidate by clean CPF and matching vaga
+        const cand = data.candidates.find(c => 
+          c.cleanCpf === cpf && 
+          (!targetVaga || c.vaga.toLowerCase().trim() === targetVaga.toLowerCase().trim())
+        );
         if (!cand) {
           throw new Error('Cursista não encontrado ou sem permissão de acesso.');
         }
