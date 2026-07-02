@@ -100,6 +100,11 @@ export async function POST(request) {
         Link_Classroom:  targetClass.Link_Classroom || '',
         id_classroom:    targetClass.id_classroom   || '',
         _alteredBy:      session.email,
+        transferRequest: {
+          status: 'RESOLVED',
+          resolvedAt: new Date().toISOString(),
+          resolvedBy: session.email
+        }
       });
     } else {
       // Caso 2: Cursista do CSV base. Criamos um registro no Firestore apontando para a nova turma

@@ -32,6 +32,13 @@ export default function CandidateDetailPage({ params }) {
   const [sheetsSynced, setSheetsSynced] = useState(true);
   const [formScheduleFilter, setFormScheduleFilter] = useState('ALL');
 
+  // Modality Transfer Modal State
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [requestedModality, setRequestedModality] = useState('');
+  const [requestedShift, setRequestedShift] = useState('');
+  const [savingTransfer, setSavingTransfer] = useState(false);
+  const [transferError, setTransferError] = useState('');
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -231,10 +238,8 @@ export default function CandidateDetailPage({ params }) {
       if (res.ok && data.success) {
         setSheetsSynced(data.sheetsSynced);
         setSuccess(true);
-        setTimeout(() => {
-          router.push('/candidates');
-          router.refresh();
-        }, 3000);
+        // Exibe o modal de solicitação de troca de modalidade/turno
+        setShowTransferModal(true);
       } else {
         setError(data.error || 'Ocorreu um erro ao realizar a matrícula.');
       }
@@ -243,6 +248,49 @@ export default function CandidateDetailPage({ params }) {
       console.error(err);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  function handleFinishWithoutTransfer() {
+    setShowTransferModal(false);
+    router.push('/candidates');
+    router.refresh();
+  }
+
+  async function handleSaveTransfer() {
+    if (!requestedModality || !requestedShift) {
+      setTransferError('Por favor, selecione a modalidade e o turno pretendidos.');
+      return;
+    }
+
+    setSavingTransfer(true);
+    setTransferError('');
+
+    try {
+      const res = await fetch('/api/request-transfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cpf: candidate.cpf,
+          componente: candidate.vaga,
+          requestedModality,
+          requestedShift,
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setShowTransferModal(false);
+        router.push('/candidates');
+        router.refresh();
+      } else {
+        setTransferError(data.error || 'Erro ao salvar solicitação.');
+      }
+    } catch (e) {
+      setTransferError('Erro de conexão ao salvar solicitação.');
+      console.error(e);
+    } finally {
+      setSavingTransfer(false);
     }
   }
 
@@ -721,6 +769,88 @@ export default function CandidateDetailPage({ params }) {
           </button>
         </div>
       </form>
+
+      {/* ---- Modal de Solicitação de Troca de Modalidade/Turno ---- */}
+      {showTransferModal && (
+        <div className="modal-overlay" style={{ zIndex: '9999' }}>
+          <div className="modal-box" style={{ maxWidth: '460px' }}>
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '0.75rem', color: 'var(--text-main)' }}>
+              🚨 Alteração de Modalidade / Turno
+            </h3>
+            
+            <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: '1.5', marginBottom: '1.5rem' }}>
+              A matrícula de <strong>{candidate?.nome}</strong> foi gravada. Este cursista precisa alterar a modalidade ou turno em relação à vaga original do concurso?
+            </p>
+
+            {/* Error Message */}
+            {transferError && (
+              <div style={{
+                backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.2)',
+                color: 'var(--error)',
+                padding: '0.75rem',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '0.85rem',
+                marginBottom: '1rem',
+                fontWeight: '500'
+              }}>
+                ⚠️ {transferError}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: '0.85rem' }}>Modalidade Pretendida</label>
+                <select
+                  value={requestedModality}
+                  onChange={(e) => setRequestedModality(e.target.value)}
+                  className="form-input"
+                  style={{ fontSize: '0.88rem' }}
+                >
+                  <option value="">-- Selecione a modalidade --</option>
+                  <option value="DOCENTE">DOCENTE</option>
+                  <option value="EQ. GESTORA">EQ. GESTORA</option>
+                  <option value="TÉCNICOS">TÉCNICOS</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: '0.85rem' }}>Turno Pretendido</label>
+                <select
+                  value={requestedShift}
+                  onChange={(e) => setRequestedShift(e.target.value)}
+                  className="form-input"
+                  style={{ fontSize: '0.88rem' }}
+                >
+                  <option value="">-- Selecione o turno --</option>
+                  <option value="MANHÃ">MANHÃ</option>
+                  <option value="TARDE">TARDE</option>
+                  <option value="NOITE">NOITE</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
+              <button
+                onClick={handleFinishWithoutTransfer}
+                className="btn btn-outline"
+                disabled={savingTransfer}
+                style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+              >
+                Não precisa
+              </button>
+              <button
+                onClick={handleSaveTransfer}
+                className="btn btn-secondary"
+                disabled={savingTransfer || !requestedModality || !requestedShift}
+                style={{ padding: '0.5rem 1.25rem', fontSize: '0.85rem', minWidth: '150px' }}
+              >
+                {savingTransfer ? 'Enviando...' : '⚠️ Solicitar e Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
