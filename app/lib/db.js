@@ -109,6 +109,11 @@ export async function getClasses() {
 
   // 2. Conta matrículas novas do Firestore
   newEnrollments.forEach(student => {
+    // Registros manuais não ocupam vaga física em turmas do portal
+    if (student.ensaladoManual || student.turma === 'MANUAL') {
+      return;
+    }
+
     const comp  = student.componente || '';
     const name  = student.turma     || '';
     const turno = student.turno     || '';

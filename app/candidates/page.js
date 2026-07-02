@@ -316,6 +316,10 @@ export default function CandidatesPage() {
                     <td>
                       {c.status === 'ENROLLED' ? (
                         <span className="badge badge-success">✓ Ensalado</span>
+                      ) : c.status === 'ENROLLED_MANUAL' ? (
+                        <span className="badge" style={{ backgroundColor: '#0284c7', color: '#ffffff' }}>
+                          ✓ Ensalado (Manual)
+                        </span>
                       ) : (
                         <span className="badge badge-pending">⏳ Pendente</span>
                       )}

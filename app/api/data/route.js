@@ -64,17 +64,29 @@ export async function GET(request) {
     const baseMatricula = parseMatricula();
     const newEnrollments = await getNewEnrollments();
 
-    // Build a set of clean "CPF_Componente" strings of already enrolled students to support multiple contracts
+    // Build sets of clean "CPF_Componente" strings of already enrolled students
     const enrolledVias = new Set();
+    const manualEnrolledVias = new Set();
+
     baseMatricula.forEach(student => {
       const cpf = cleanCpf(student.cpf_cursista);
       const comp = normalizeString(student.componente);
       if (cpf && comp) enrolledVias.add(`${cpf}_${comp}`);
     });
+
     newEnrollments.forEach(student => {
       const cpf = cleanCpf(student.cpf_cursista);
       const comp = normalizeString(student.componente);
-      if (cpf && comp) enrolledVias.add(`${cpf}_${comp}`);
+      if (cpf && comp) {
+        const key = `${cpf}_${comp}`;
+        if (student.ensaladoManual || student.turma === 'MANUAL') {
+          manualEnrolledVias.add(key);
+          enrolledVias.delete(key); // Firestore precedence overrides base CSV
+        } else {
+          enrolledVias.add(key);
+          manualEnrolledVias.delete(key);
+        }
+      }
     });
 
     // Filter candidates by NRE
@@ -83,11 +95,19 @@ export async function GET(request) {
       .map(c => {
         const cpfClean = cleanCpf(c.cpf);
         const compMapped = normalizeString(mapVagaToComponent(c.vaga));
-        const isEnrolled = enrolledVias.has(`${cpfClean}_${compMapped}`);
+        const key = `${cpfClean}_${compMapped}`;
+        
+        let status = 'PENDING';
+        if (enrolledVias.has(key)) {
+          status = 'ENROLLED';
+        } else if (manualEnrolledVias.has(key)) {
+          status = 'ENROLLED_MANUAL';
+        }
+
         return {
           ...c,
           cleanCpf: cpfClean,
-          status: isEnrolled ? 'ENROLLED' : 'PENDING'
+          status
         };
       });
 
@@ -100,7 +120,7 @@ export async function GET(request) {
 
     // 4. Calculate Stats for this NRE
     const totalCandidates = filteredCandidates.length;
-    const enrolledCandidates = filteredCandidates.filter(c => c.status === 'ENROLLED').length;
+    const enrolledCandidates = filteredCandidates.filter(c => c.status === 'ENROLLED' || c.status === 'ENROLLED_MANUAL').length;
     const pendingCandidates = totalCandidates - enrolledCandidates;
 
     return NextResponse.json({
