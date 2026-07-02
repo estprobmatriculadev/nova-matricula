@@ -1,0 +1,19 @@
+{
+  "name": "matriculas-registration-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "csv-parse": "^5.5.6",
+    "googleapis": "^140.0.0",
+    "iconv-lite": "^0.6.3",
+    "next": "^14.2.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}
