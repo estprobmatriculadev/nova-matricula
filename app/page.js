@@ -173,28 +173,41 @@ export default function LoginPage() {
 
       <div className="glass-card animate-fade-in" style={{
         width: '100%',
-        maxWidth: '520px',
-        padding: '3rem 2.5rem',
+        maxWidth: '480px',
+        padding: '2rem 1.5rem', // Reduced padding on mobile
         zIndex: 1,
         borderRadius: 'var(--radius-lg)',
         border: '1px solid var(--border-color)',
         boxShadow: 'var(--shadow-lg)'
       }}>
+        <style>{`
+          @media (min-width: 480px) {
+            .glass-card { padding: 3rem 2.5rem !important; }
+          }
+          /* Custom style to make select elements display nicely even with long text */
+          select.form-input {
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+            width: 100%;
+            display: block;
+          }
+        `}</style>
         {/* Header Logo */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <img
             src="/brasao.svg"
             alt="Brasão SEED Paraná"
             style={{
-              width: '90px',
-              height: '90px',
+              width: '80px',
+              height: '80px',
               objectFit: 'contain',
               marginBottom: '1rem',
               filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))'
             }}
           />
-          <h1 style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>SEED Paraná</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', fontWeight: '500' }}>
+          <h1 style={{ fontSize: '1.75rem', marginBottom: '0.25rem' }}>SEED Paraná</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: '500' }}>
             Portal de Ensalamento - Estágio Probatório
           </p>
         </div>
@@ -217,12 +230,12 @@ export default function LoginPage() {
           </div>
         )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           {/* Main Google Login button */}
           {googleClientConfigured ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
-              <div id="google-signin-button" style={{ display: 'flex', justifyContent: 'center' }}></div>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <div id="google-signin-button" style={{ display: 'flex', justifyContent: 'center', width: '100%', maxWidth: '380px' }}></div>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center' }}>
                 Selecione sua conta institucional para acessar o portal.
               </span>
             </div>
@@ -233,9 +246,9 @@ export default function LoginPage() {
                 disabled={loading}
                 className="btn btn-primary"
                 style={{
-                  padding: '1rem',
+                  padding: '0.85rem 1rem',
                   borderRadius: 'var(--radius-sm)',
-                  fontSize: '1rem',
+                  fontSize: '0.95rem',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -244,16 +257,17 @@ export default function LoginPage() {
                   backgroundColor: '#ffffff',
                   color: '#1f2937',
                   border: '1px solid #d1d5db',
-                  boxShadow: 'var(--shadow-sm)'
+                  boxShadow: 'var(--shadow-sm)',
+                  whiteSpace: 'normal', // Allow wrapping on very small screens
                 }}
               >
                 {/* Google Icon G */}
-                <svg width="20" height="20" viewBox="0 0 24 24">
+                <svg width="20" height="20" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
                   <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.186 4.114-3.535 0-6.402-2.867-6.402-6.402s2.867-6.402 6.402-6.402c1.782 0 3.33.729 4.434 1.91l3.18-3.18C19.266 2.228 15.982 1 12.24 1 6.032 1 1 6.032 1 12.24s5.032 11.24 11.24 11.24c5.897 0 10.867-4.248 10.867-11.24 0-.668-.073-1.31-.192-1.955H12.24z"/>
                 </svg>
-                <span style={{ fontWeight: '700' }}>Entrar com Google (Simulado)</span>
+                <span style={{ fontWeight: '700' }}>Fazer Login com o Google</span>
               </button>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', margin: '0.25rem 0' }}>
+              <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textAlign: 'center', margin: '0.25rem 0', lineHeight: 1.3 }}>
                 💡 Para usar o login automático da conta Google, configure a variável de ambiente <code>NEXT_PUBLIC_GOOGLE_CLIENT_ID</code> no painel da Vercel.
               </p>
             </div>
@@ -265,11 +279,11 @@ export default function LoginPage() {
             alignItems: 'center',
             gap: '1rem',
             color: 'var(--text-muted)',
-            fontSize: '0.85rem',
-            margin: '0.5rem 0'
+            fontSize: '0.8rem',
+            margin: '0.25rem 0'
           }}>
             <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }}></div>
-            <span>OU USE O SIMULADOR DE TUTOR</span>
+            <span style={{ fontWeight: '600', fontSize: '0.75rem', letterSpacing: '0.05em' }}>OU USE O SIMULADOR DE TUTOR</span>
             <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }}></div>
           </div>
 
@@ -278,7 +292,9 @@ export default function LoginPage() {
             <div className="glass-card" style={{
               padding: '1.25rem',
               backgroundColor: 'rgba(148, 163, 184, 0.04)',
-              border: '1px dashed var(--border-color)'
+              border: '1px dashed var(--border-color)',
+              width: '100%',
+              boxSizing: 'border-box'
             }}>
               <div className="form-group" style={{ marginBottom: '1rem' }}>
                 <label className="form-label">Selecionar Tutora Responsável (NRE):</label>
@@ -289,7 +305,7 @@ export default function LoginPage() {
                     setError('');
                   }}
                   className="form-input"
-                  style={{ cursor: 'pointer' }}
+                  style={{ cursor: 'pointer', maxWidth: '100%' }}
                 >
                   {tutors.map((t) => (
                     <option key={t.email} value={t.email}>
@@ -303,7 +319,7 @@ export default function LoginPage() {
                 onClick={() => handleLogin(selectedTutorEmail)}
                 disabled={loading || !selectedTutorEmail}
                 className="btn btn-secondary"
-                style={{ width: '100%', padding: '0.75rem' }}
+                style={{ width: '100%', padding: '0.75rem', fontSize: '0.95rem' }}
               >
                 {loading ? 'Entrando...' : 'Simular Login do Tutor'}
               </button>
@@ -312,8 +328,8 @@ export default function LoginPage() {
 
           {/* Explanatory notes footer */}
           <div style={{
-            marginTop: '1.5rem',
-            fontSize: '0.75rem',
+            marginTop: '1rem',
+            fontSize: '0.72rem',
             color: 'var(--text-muted)',
             textAlign: 'center',
             lineHeight: '1.4'

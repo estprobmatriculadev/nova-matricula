@@ -254,6 +254,39 @@ export default function CandidateDetailPage({ params }) {
   const matchedClasses = classes.filter(c => normalizeString(c.componente) === normalizeString(matchedComponent));
   const otherClassesList = classes.filter(c => normalizeString(c.componente) !== normalizeString(matchedComponent));
 
+  // Schedule filtering in detail form
+  const [formScheduleFilter, setFormScheduleFilter] = useState('ALL');
+
+  // Build unique schedules for the component classes
+  const availableSchedules = [
+    ...new Map(
+      classes.map(c => {
+        const key = `${c.dia_da_semana}|${c.horario_inicial}|${c.horario_fim}`;
+        const label = `${c.dia_da_semana} · ${c.horario_inicial} – ${c.horario_fim} (${c.turno})`;
+        return [key, { key, label }];
+      })
+    ).values()
+  ].sort((a, b) => a.label.localeCompare(b.label));
+
+  // Filter dropdown options based on the selected schedule
+  const visibleClasses = classes.filter(c => {
+    if (formScheduleFilter === 'ALL') return true;
+    const key = `${c.dia_da_semana}|${c.horario_inicial}|${c.horario_fim}`;
+    return key === formScheduleFilter;
+  });
+
+  // Automatically adjust selected class if current selection is filtered out
+  useEffect(() => {
+    if (visibleClasses.length > 0) {
+      const isStillVisible = visibleClasses.some(c => c.classKey === selectedClassKey);
+      if (!isStillVisible) {
+        setSelectedClassKey(visibleClasses[0].classKey);
+      }
+    } else {
+      setSelectedClassKey('');
+    }
+  }, [formScheduleFilter, classes]);
+
   return (
     <div className="animate-fade-in" style={{ maxWidth: '800px', margin: '0 auto' }}>
       <div style={{ marginBottom: '2rem' }}>
@@ -371,6 +404,24 @@ export default function CandidateDetailPage({ params }) {
         {/* Class Select Row */}
         <div style={{ marginBottom: '2rem' }}>
           <div className="form-group" style={{ margin: 0 }}>
+            {/* Filtro por Horário */}
+            <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.75rem', flexDirection: 'column' }}>
+              <label className="form-label" style={{ fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-muted)' }}>
+                Filtrar Turmas por Dia/Horário
+              </label>
+              <select
+                value={formScheduleFilter}
+                onChange={(e) => setFormScheduleFilter(e.target.value)}
+                className="form-input"
+                style={{ cursor: 'pointer', backgroundColor: 'rgba(148, 163, 184, 0.04)' }}
+              >
+                <option value="ALL">Todos os horários disponíveis ({classes.length} turmas)</option>
+                {availableSchedules.map(sched => (
+                  <option key={sched.key} value={sched.key}>{sched.label}</option>
+                ))}
+              </select>
+            </div>
+
             <label className="form-label">Selecionar Turma *</label>
             {fallbackWarning && (
               <div style={{
@@ -394,12 +445,17 @@ export default function CandidateDetailPage({ params }) {
               style={{ cursor: 'pointer' }}
             >
               <option value="" disabled>-- Selecione uma turma --</option>
-              {classes.map(cls => (
+              {visibleClasses.map(cls => (
                 <option key={cls.classKey} value={cls.classKey} disabled={cls.vacancies <= 0}>
-                  [{cls.componente}] {cls.turma} — {cls.dia_da_semana} ({cls.turno}) [{cls.vacancies} vagas] {cls.vacancies <= 0 ? '(LOTADA)' : ''}
+                  [{cls.componente}] {cls.turma} — {cls.dia_da_semana} ({cls.turno}) [{cls.vacancies} vaga{cls.vacancies !== 1 ? 's' : ''}] {cls.vacancies <= 0 ? '(LOTADA)' : ''}
                 </option>
               ))}
             </select>
+            {visibleClasses.length === 0 && (
+              <p style={{ fontSize: '0.8rem', color: 'var(--error)', marginTop: '0.5rem' }}>
+                Nenhuma turma disponível para o horário selecionado.
+              </p>
+            )}
           </div>
         </div>
 
