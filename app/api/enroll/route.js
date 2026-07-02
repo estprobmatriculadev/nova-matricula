@@ -146,22 +146,24 @@ export async function POST(request) {
       outras_necessidades: outras_necessidades || ''
     };
 
-    // 5. Save locally
-    await saveNewEnrollment(enrollmentRecord);
-
-    // 6. Append to Google Sheets (if configured)
-    const sheetsResult = await appendEnrollmentToSheets(enrollmentRecord);
-
-    if (isSheetsConfigured() && !sheetsResult.success) {
-      return NextResponse.json({ 
-        error: `Erro ao salvar na planilha do Google: ${sheetsResult.error || 'Erro de permissão ou conexão.'}` 
+    // 5. Salva no Firestore (banco primário)
+    const firestoreResult = await saveNewEnrollment(enrollmentRecord);
+    if (!firestoreResult.success) {
+      return NextResponse.json({
+        error: `Erro ao salvar no banco de dados: ${firestoreResult.error || 'Tente novamente.'}`
       }, { status: 500 });
     }
+
+    // 6. Espelha na planilha Google Sheets de forma assíncrona (fire-and-forget)
+    // Não bloqueia a resposta — falha no Sheets não afeta o ensalamento
+    appendEnrollmentToSheets(enrollmentRecord).catch(err => {
+      console.warn('Sheets backup falhou (não crítico):', err.message);
+    });
 
     return NextResponse.json({
       success: true,
       cod_cursista,
-      sheetsSynced: sheetsResult.success
+      sheetsSynced: isSheetsConfigured(), // indica se tentará sincronizar
     });
   } catch (error) {
     console.error('Enroll API Error:', error);

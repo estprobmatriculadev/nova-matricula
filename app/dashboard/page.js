@@ -11,6 +11,11 @@ export default function DashboardPage() {
 
   const [selectedNre, setSelectedNre] = useState('ALL');
 
+  // Reset state (admin only)
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetMsg, setResetMsg] = useState('');
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -88,6 +93,29 @@ export default function DashboardPage() {
 
   const pctEnrolled = displayStats.total > 0 ? Math.round((displayStats.enrolled / displayStats.total) * 100) : 0;
 
+  async function handleReset() {
+    setResetting(true);
+    setResetMsg('');
+    try {
+      const res = await fetch('/api/reset-enrollments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: 'ZERAR_MATRICULAS' }),
+      });
+      const result = await res.json();
+      if (res.ok && result.success) {
+        setResetMsg(`✅ ${result.message}`);
+        setTimeout(() => { setShowResetConfirm(false); setResetMsg(''); window.location.reload(); }, 3000);
+      } else {
+        setResetMsg(`⚠️ ${result.error}`);
+      }
+    } catch (e) {
+      setResetMsg('⚠️ Erro de rede. Tente novamente.');
+    } finally {
+      setResetting(false);
+    }
+  }
+
   return (
     <div className="animate-fade-in">
       {/* Upper header */}
@@ -97,6 +125,68 @@ export default function DashboardPage() {
           Bem-vindo, <strong>{tutorInfo.tutorName}</strong>. Aqui está o resumo das matrículas do 6º Chamamento.
         </p>
       </div>
+
+      {/* Admin: Zona de perigo — Zerar matrículas de teste */}
+      {tutorInfo.role === 'admin' && (
+        <div style={{
+          marginBottom: '2rem',
+          padding: '1rem 1.5rem',
+          borderRadius: 'var(--radius-md)',
+          border: '1px solid rgba(239,68,68,0.25)',
+          backgroundColor: 'rgba(239,68,68,0.04)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '1rem',
+        }}>
+          <div>
+            <p style={{ fontWeight: '700', color: 'var(--error)', fontSize: '0.9rem' }}>🗑️ Zona de Administração — Produção</p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+              Apaga todas as matrículas de teste do Firebase antes de ir para produção.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowResetConfirm(true)}
+            className="btn btn-danger"
+            style={{ padding: '0.5rem 1.25rem', fontSize: '0.85rem' }}
+          >
+            🗑️ Zerar Matrículas de Teste
+          </button>
+        </div>
+      )}
+
+      {/* Modal de confirmação do reset */}
+      {showResetConfirm && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowResetConfirm(false)}>
+          <div className="modal-box" style={{ maxWidth: '420px' }}>
+            <h2 style={{ fontSize: '1.2rem', color: 'var(--error)', marginBottom: '0.75rem' }}>⚠️ Confirmar Reset</h2>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '0.5rem' }}>
+              Esta ação irá <strong>apagar permanentemente</strong> todas as matrículas registradas pelo portal no Firebase.
+            </p>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+              Os dados do CSV base e da planilha original não serão afetados. Use apenas antes de efetivar o sistema.
+            </p>
+            {resetMsg && (
+              <div style={{
+                padding: '0.75rem 1rem',
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: resetMsg.startsWith('✅') ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)',
+                color: resetMsg.startsWith('✅') ? 'var(--success)' : 'var(--error)',
+                fontSize: '0.85rem', fontWeight: '600', marginBottom: '1rem',
+              }}>
+                {resetMsg}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowResetConfirm(false)} className="btn btn-outline" disabled={resetting}>Cancelar</button>
+              <button onClick={handleReset} className="btn btn-danger" disabled={resetting} style={{ minWidth: '140px' }}>
+                {resetting ? 'Apagando...' : '🗑️ Confirmar Reset'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Admin NRE Filter Selector */}
       {tutorInfo.role === 'admin' && (
