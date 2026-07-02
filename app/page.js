@@ -53,7 +53,7 @@ export default function LoginPage() {
           });
           window.google.accounts.id.renderButton(
             document.getElementById('google-signin-button'),
-            { theme: 'outline', size: 'large', width: '380', text: 'signin_with', shape: 'rectangular' }
+            { theme: 'outline', size: 'large', width: '280', text: 'signin_with', shape: 'rectangular' }
           );
         }
       };
@@ -200,7 +200,7 @@ export default function LoginPage() {
           {/* Main Google Login button */}
           {googleClientConfigured ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
-              <div id="google-signin-button" style={{ display: 'flex', justifyContent: 'center', width: '100%', maxWidth: '380px' }}></div>
+              <div id="google-signin-button" style={{ display: 'flex', justifyContent: 'center', width: '100%', maxWidth: '280px' }}></div>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center' }}>
                 Selecione sua conta institucional para acessar o portal.
               </span>

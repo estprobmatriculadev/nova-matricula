@@ -161,8 +161,36 @@ export default function CandidatesPage() {
     );
   }
 
-  // Classes available for reassignment in the modal (with vacancies)
-  const availableClasses = allClasses.filter(c => c.vacancies > 0);
+  // Map candidate "VAGA" from Nomeados CSV to classroom "COMPONENTE"
+  function mapVagaToComponent(vaga) {
+    const v = (vaga || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+    if (v.includes('MATEMATICA')) return 'MATEMATICA';
+    if (v.includes('PORTUGUES') || v.includes('LINGUA PORTUGUESA')) return 'PORTUGUES';
+    if (v.includes('INGLES') || v.includes('LINGUA ESTRANGEIRA') || v.includes('INGL')) return 'INGLES';
+    if (v.includes('EDUCACAO FISICA') || v.includes('E FISIC')) return 'EDUCACAO FISICA';
+    if (v.includes('ARTE')) return 'ARTE';
+    if (v.includes('CIENCIAS')) return 'CIENCIAS';
+    if (v.includes('BIOLOGIA')) return 'BIOLOGIA';
+    if (v.includes('GEOGRAFIA')) return 'GEOGRAFIA';
+    if (v.includes('HISTORIA')) return 'HISTORIA';
+    if (v.includes('SOCIOLOGIA')) return 'SOCIOLOGIA';
+    if (v.includes('FILOSOFIA')) return 'FILOSOFIA';
+    if (v.includes('QUIMICA')) return 'QUIMICA';
+    if (v.includes('FISICA')) return 'FISICA';
+    if (v.includes('PEDAGOGO') || v.includes('EQ GESTORA')) return 'EQ GESTORA';
+    return vaga;
+  }
+
+  // Classes available for reassignment in the modal (with vacancies and same component)
+  const availableClasses = allClasses.filter(cls => {
+    if (cls.vacancies <= 0) return false;
+    if (!changeModal?.candidate) return true;
+    
+    const candidateComp = mapVagaToComponent(changeModal.candidate.vaga).toUpperCase().trim();
+    const classComp = cls.componente.toUpperCase().trim();
+    
+    return candidateComp === classComp;
+  });
 
   return (
     <div className="animate-fade-in">
