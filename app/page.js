@@ -6,12 +6,8 @@ import Script from 'next/script';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [tutors, setTutors] = useState([]);
-  const [selectedTutorEmail, setSelectedTutorEmail] = useState('');
-  const [manualEmail, setManualEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showSimulator, setShowSimulator] = useState(true);
   const [googleClientConfigured, setGoogleClientConfigured] = useState(false);
 
   useEffect(() => {
@@ -20,25 +16,7 @@ export default function LoginPage() {
     const hasSession = cookies.some(item => item.trim().startsWith('tutor_session='));
     if (hasSession) {
       router.push('/dashboard');
-      return;
     }
-
-    // Load available tutors for the simulator dropdown
-    async function loadTutors() {
-      try {
-        const res = await fetch('/api/auth/tutors');
-        const data = await res.json();
-        if (data.tutors) {
-          setTutors(data.tutors);
-          if (data.tutors.length > 0) {
-            setSelectedTutorEmail(data.tutors[0].email);
-          }
-        }
-      } catch (err) {
-        console.error('Error loading tutors:', err);
-      }
-    }
-    loadTutors();
   }, [router]);
 
   // Handle Google Identity Services Credential response
@@ -92,7 +70,7 @@ export default function LoginPage() {
         return () => clearInterval(interval);
       }
     }
-  }, [tutors]); // Re-run when tutors load to ensure container DOM is ready
+  }, []);
 
   async function handleLogin(emailToUse) {
     if (!emailToUse) {
@@ -131,8 +109,8 @@ export default function LoginPage() {
     setLoading(true);
     // Standard prompt: if they enter an email, we log them in. 
     // In production, this would trigger standard OAuth. We show a prompt
-    // to type their NRE email (e-mail_nre) or log in via simulator.
-    const email = prompt('Digite seu e-mail do Google (e-mail_nre):', selectedTutorEmail || '');
+    // to type their NRE email (e-mail_nre).
+    const email = prompt('Digite seu e-mail do Google institucional (e-mail_nre):', '');
     if (email) {
       handleLogin(email);
     } else {
@@ -261,58 +239,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Separator */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem',
-            color: 'var(--text-muted)',
-            fontSize: '0.8rem',
-            margin: '0.25rem 0'
-          }}>
-            <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }}></div>
-            <span style={{ fontWeight: '600', fontSize: '0.75rem', letterSpacing: '0.05em' }}>OU USE O SIMULADOR DE TUTOR</span>
-            <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-color)' }}></div>
-          </div>
 
-          {/* Simulation Login Form */}
-          {showSimulator && (
-            <div className="glass-card" style={{
-              padding: '1.25rem',
-              backgroundColor: 'rgba(148, 163, 184, 0.04)',
-              border: '1px dashed var(--border-color)',
-              width: '100%',
-              boxSizing: 'border-box'
-            }}>
-              <div className="form-group" style={{ marginBottom: '1rem' }}>
-                <label className="form-label">Selecionar Tutora Responsável (NRE):</label>
-                <select
-                  value={selectedTutorEmail}
-                  onChange={(e) => {
-                    setSelectedTutorEmail(e.target.value);
-                    setError('');
-                  }}
-                  className="form-input"
-                  style={{ cursor: 'pointer', maxWidth: '100%' }}
-                >
-                  {tutors.map((t) => (
-                    <option key={t.email} value={t.email}>
-                      NRE {t.nre} — {t.name} ({t.email})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <button
-                onClick={() => handleLogin(selectedTutorEmail)}
-                disabled={loading || !selectedTutorEmail}
-                className="btn btn-secondary"
-                style={{ width: '100%', padding: '0.75rem', fontSize: '0.95rem' }}
-              >
-                {loading ? 'Entrando...' : 'Simular Login do Tutor'}
-              </button>
-            </div>
-          )}
 
           {/* Explanatory notes footer */}
           <div style={{

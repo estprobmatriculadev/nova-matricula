@@ -110,17 +110,18 @@ export default function CandidateDetailPage({ params }) {
 
   // Automatically adjust selected class if current selection is filtered out by schedule selection
   useEffect(() => {
-    // Filter dropdown options based on the selected schedule
+    // Filter dropdown options based on the selected schedule (only by start and end time)
     const visibleClasses = classes.filter(c => {
       if (formScheduleFilter === 'ALL') return true;
-      const key = `${c.dia_da_semana}|${c.horario_inicial}|${c.horario_fim}`;
+      const key = `${c.horario_inicial}|${c.horario_fim}`;
       return key === formScheduleFilter;
     });
 
     if (visibleClasses.length > 0) {
       const isStillVisible = visibleClasses.some(c => c.classKey === selectedClassKey);
       if (!isStillVisible) {
-        setSelectedClassKey(visibleClasses[0].classKey);
+        const withVacancies = visibleClasses.filter(c => c.vacancies > 0);
+        setSelectedClassKey(withVacancies.length > 0 ? withVacancies[0].classKey : visibleClasses[0].classKey);
       }
     } else {
       setSelectedClassKey('');
@@ -274,12 +275,12 @@ export default function CandidateDetailPage({ params }) {
   const matchedClasses = classes.filter(c => normalizeString(c.componente) === normalizeString(matchedComponent));
   const otherClassesList = classes.filter(c => normalizeString(c.componente) !== normalizeString(matchedComponent));
 
-  // Build unique schedules for the component classes
+  // Build unique schedules for the component classes (Only Time, no Day)
   const availableSchedules = [
     ...new Map(
       classes.map(c => {
-        const key = `${c.dia_da_semana}|${c.horario_inicial}|${c.horario_fim}`;
-        const label = `${c.dia_da_semana} · ${c.horario_inicial} – ${c.horario_fim} (${c.turno})`;
+        const key = `${c.horario_inicial}|${c.horario_fim}`;
+        const label = `${c.horario_inicial} – ${c.horario_fim} (${c.turno})`;
         return [key, { key, label }];
       })
     ).values()
@@ -288,7 +289,7 @@ export default function CandidateDetailPage({ params }) {
   // Filter dropdown options based on the selected schedule
   const visibleClasses = classes.filter(c => {
     if (formScheduleFilter === 'ALL') return true;
-    const key = `${c.dia_da_semana}|${c.horario_inicial}|${c.horario_fim}`;
+    const key = `${c.horario_inicial}|${c.horario_fim}`;
     return key === formScheduleFilter;
   });
 
@@ -408,11 +409,10 @@ export default function CandidateDetailPage({ params }) {
 
         {/* Class Select Row */}
         <div style={{ marginBottom: '2rem' }}>
-          <div className="form-group" style={{ margin: 0 }}>
             {/* Filtro por Horário */}
-            <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.75rem', flexDirection: 'column' }}>
-              <label className="form-label" style={{ fontSize: '0.85rem', fontWeight: '500', color: 'var(--text-muted)' }}>
-                Filtrar Turmas por Dia/Horário
+            <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.75rem', flexDirection: 'column' }}>
+              <label className="form-label" style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>
+                Filtrar Turmas por Horário
               </label>
               <select
                 value={formScheduleFilter}
@@ -420,14 +420,14 @@ export default function CandidateDetailPage({ params }) {
                 className="form-input"
                 style={{ cursor: 'pointer', backgroundColor: 'rgba(148, 163, 184, 0.04)' }}
               >
-                <option value="ALL">Todos os horários disponíveis ({classes.length} turmas)</option>
+                <option value="ALL">Todos os horários ({classes.length} turmas)</option>
                 {availableSchedules.map(sched => (
                   <option key={sched.key} value={sched.key}>{sched.label}</option>
                 ))}
               </select>
             </div>
 
-            <label className="form-label">Selecionar Turma *</label>
+            <label className="form-label" style={{ marginBottom: '0.75rem' }}>Selecionar Turma *</label>
             {fallbackWarning && (
               <div style={{
                 backgroundColor: 'rgba(245, 158, 11, 0.08)',
@@ -437,31 +437,146 @@ export default function CandidateDetailPage({ params }) {
                 borderRadius: 'var(--radius-sm)',
                 fontSize: '0.75rem',
                 fontWeight: '500',
-                marginBottom: '0.5rem'
+                marginBottom: '1rem'
               }}>
                 ⚠️ {fallbackWarning}
               </div>
             )}
-            <select
-              value={selectedClassKey}
-              onChange={(e) => setSelectedClassKey(e.target.value)}
-              className="form-input"
-              required
-              style={{ cursor: 'pointer' }}
-            >
-              <option value="" disabled>-- Selecione uma turma --</option>
-              {visibleClasses.map(cls => (
-                <option key={cls.classKey} value={cls.classKey} disabled={cls.vacancies <= 0}>
-                  [{cls.componente}] {cls.turma} — {cls.dia_da_semana} ({cls.turno}) [{cls.vacancies} vaga{cls.vacancies !== 1 ? 's' : ''}] {cls.vacancies <= 0 ? '(LOTADA)' : ''}
-                </option>
-              ))}
-            </select>
-            {visibleClasses.length === 0 && (
-              <p style={{ fontSize: '0.8rem', color: 'var(--error)', marginTop: '0.5rem' }}>
-                Nenhuma turma disponível para o horário selecionado.
+
+            {/* Grid de Cards de Turmas */}
+            {visibleClasses.length > 0 ? (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                gap: '1rem',
+                maxHeight: '400px',
+                overflowY: 'auto',
+                padding: '0.25rem',
+                marginBottom: '1rem',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: 'rgba(148, 163, 184, 0.02)'
+              }}>
+                {visibleClasses.map(cls => {
+                  const isSelected = selectedClassKey === cls.classKey;
+                  const isLotada = cls.vacancies <= 0;
+
+                  // Calcula cores do card baseadas nas vagas
+                  let cardBorder = 'var(--border-color)';
+                  let cardBg = 'var(--bg-secondary)';
+                  let badgeBg = 'rgba(16, 185, 129, 0.12)';
+                  let badgeColor = '#047857';
+
+                  if (isLotada) {
+                    cardBorder = 'rgba(239, 68, 68, 0.25)';
+                    cardBg = 'rgba(239, 68, 68, 0.02)';
+                    badgeBg = 'rgba(239, 68, 68, 0.15)';
+                    badgeColor = '#b91c1c';
+                  } else {
+                    const pct = cls.capacity > 0 ? ((cls.capacity - cls.vacancies) / cls.capacity) * 100 : 0;
+                    if (pct >= 90) {
+                      cardBorder = 'rgba(249, 115, 22, 0.25)';
+                      cardBg = 'rgba(249, 115, 22, 0.01)';
+                      badgeBg = 'rgba(249, 115, 22, 0.15)';
+                      badgeColor = '#c2410c';
+                    } else if (pct >= 60) {
+                      cardBorder = 'rgba(245, 158, 11, 0.25)';
+                      cardBg = 'rgba(245, 158, 11, 0.01)';
+                      badgeBg = 'rgba(245, 158, 11, 0.15)';
+                      badgeColor = '#b45309';
+                    }
+                  }
+
+                  // Destaque se estiver selecionado
+                  if (isSelected) {
+                    cardBorder = 'var(--primary)';
+                    cardBg = 'var(--primary-light)';
+                  }
+
+                  return (
+                    <div
+                      key={cls.classKey}
+                      onClick={() => !isLotada && setSelectedClassKey(cls.classKey)}
+                      style={{
+                        border: isSelected ? '2px solid var(--primary)' : `1px solid ${cardBorder}`,
+                        backgroundColor: cardBg,
+                        borderRadius: 'var(--radius-sm)',
+                        padding: '1rem',
+                        cursor: isLotada ? 'not-allowed' : 'pointer',
+                        opacity: isLotada ? 0.6 : 1,
+                        position: 'relative',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        gap: '0.5rem',
+                        boxShadow: isSelected ? 'var(--shadow-md)' : 'none',
+                        transform: isSelected ? 'scale(1.01)' : 'none',
+                        transition: 'var(--transition)'
+                      }}
+                    >
+                      {/* Checkmark ativo */}
+                      {isSelected && (
+                        <span style={{
+                          position: 'absolute',
+                          top: '8px',
+                          right: '8px',
+                          backgroundColor: 'var(--primary)',
+                          color: '#fff',
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.65rem',
+                          fontWeight: 'bold'
+                        }}>
+                          ✓
+                        </span>
+                      )}
+
+                      <div>
+                        {/* Turma / Código */}
+                        <p style={{ fontWeight: '700', fontSize: '0.9rem', color: 'var(--text-main)', paddingRight: isSelected ? '18px' : '0' }}>
+                          {cls.turma}
+                        </p>
+                        
+                        {/* Dia e Horário */}
+                        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: '600', marginTop: '0.15rem' }}>
+                          {cls.dia_da_semana}<br />
+                          <span style={{ color: 'var(--text-main)' }}>{cls.horario_inicial} – {cls.horario_fim}</span> ({cls.turno})
+                        </p>
+                      </div>
+
+                      {/* Info Formador */}
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border-color)', paddingTop: '0.4rem', marginTop: '0.2rem' }}>
+                        👤 {cls.nome_formador || 'Sem Formador'}
+                      </p>
+
+                      {/* Badge de Vagas */}
+                      <div style={{ marginTop: '0.25rem' }}>
+                        <span style={{
+                          display: 'inline-flex',
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '9999px',
+                          fontSize: '0.72rem',
+                          fontWeight: '700',
+                          backgroundColor: badgeBg,
+                          color: badgeColor
+                        }}>
+                          {isLotada ? '🔴 LOTADA' : `🟢 ${cls.vacancies} vaga${cls.vacancies !== 1 ? 's' : ''}`}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p style={{ fontSize: '0.85rem', color: 'var(--error)', marginTop: '0.5rem', padding: '1rem', border: '1px dashed rgba(239, 68, 68, 0.25)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
+                ⚠️ Nenhuma turma disponível para o horário selecionado.
               </p>
             )}
-          </div>
+            <input type="hidden" name="classKey" value={selectedClassKey} required />
         </div>
 
         {/* Accessibility Fields Section */}
