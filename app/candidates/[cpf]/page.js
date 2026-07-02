@@ -337,7 +337,7 @@ export default function CandidateDetailPage({ params }) {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="glass-card" style={{ padding: '2.5rem' }}>
+      <form onSubmit={handleSubmit} className="glass-card">
         {/* Candidate Read-Only Details Grid */}
         <div style={{
           backgroundColor: 'rgba(148, 163, 184, 0.04)',

@@ -59,8 +59,20 @@ export async function getClasses() {
 
   const classesMap = {};
 
+  // Conjunto de CPFs no Firestore para evitar contagem dupla
+  const firestoreCpfs = new Set(
+    newEnrollments.map(e => (e.cpf_cursista || '').toString().replace(/\D/g, ''))
+  );
+
   // 1. Agrupa turmas existentes no CSV base
   baseMatricula.forEach(student => {
+    // Se o aluno do CSV já fez matrícula ou foi alterado pelo portal (está no Firestore),
+    // nós não contamos ele na turma antiga do CSV para não ocupar vaga duas vezes.
+    const studentCpf = (student.cpf_cursista || student.cpf || '').toString().replace(/\D/g, '');
+    if (studentCpf && firestoreCpfs.has(studentCpf)) {
+      return;
+    }
+
     const comp  = student.componente || '';
     const name  = student.turma     || '';
     const turno = student.turno     || '';

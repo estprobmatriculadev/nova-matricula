@@ -581,7 +581,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Recent Enrollments Table */}
-      <div className="glass-card" style={{ padding: '2rem' }}>
+      <div className="glass-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
           <div>
             <h3>

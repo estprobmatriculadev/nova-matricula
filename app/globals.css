@@ -666,3 +666,19 @@ select.form-input {
   display: block;
 }
 
+/* Correção de contraste e legibilidade para opções de selects (evita texto branco no fundo branco) */
+select option,
+select.form-input option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  select option,
+  select.form-input option {
+    background-color: #1e293b !important;
+    color: #f1f5f9 !important;
+  }
+}
+
+

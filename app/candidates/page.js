@@ -372,18 +372,18 @@ export default function CandidatesPage() {
               </div>
             </div>
 
-            {/* Warning */}
+            {/* Aviso informativo de remanejamento */}
             <div style={{
-              backgroundColor: 'rgba(245, 158, 11, 0.08)',
-              border: '1px solid rgba(245, 158, 11, 0.2)',
+              backgroundColor: 'rgba(9, 105, 178, 0.06)',
+              border: '1px solid var(--border-color)',
               borderRadius: 'var(--radius-sm)',
               padding: '0.75rem 1rem',
               marginBottom: '1.25rem',
               fontSize: '0.82rem',
-              color: 'var(--warning)',
+              color: 'var(--text-main)',
               fontWeight: '500',
             }}>
-              ⚠️ <strong>Atenção:</strong> Apenas matrículas realizadas por este portal podem ser alteradas aqui. Registros da planilha base devem ser alterados diretamente na planilha oficial.
+              💡 Ao confirmar, o cursista será transferido para o novo horário no sistema em tempo real.
             </div>
 
             {/* New class select */}
