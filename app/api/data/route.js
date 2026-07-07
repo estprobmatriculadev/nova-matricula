@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { parseNomeados, parseMatricula, normalizeString } from '../../lib/csvParser';
-import { getClasses, getNewEnrollments } from '../../lib/db';
+import { getClasses, getNewEnrollments, getClassCapacities } from '../../lib/db';
 import { isSheetsConfigured } from '../../lib/googleSheets';
 
 // Helper to normalize CPF (remove dots, dashes, spaces)
@@ -60,9 +60,12 @@ export async function GET(request) {
     // 1. Get all Candidates (Nomeados)
     const allCandidates = parseNomeados();
 
-    // 2. Get existing enrollments (to determine status)
+    // 2. Get existing enrollments (to determine status) and capacities in parallel
     const baseMatricula = parseMatricula();
-    const newEnrollments = await getNewEnrollments();
+    const [newEnrollments, capacitiesConfig] = await Promise.all([
+      getNewEnrollments(),
+      getClassCapacities()
+    ]);
 
     // Build sets of clean "CPF_Componente" strings of already enrolled students
     const enrolledVias = new Set();
@@ -111,8 +114,8 @@ export async function GET(request) {
         };
       });
 
-    // 3. Get Classes
-    const allClasses = await getClasses();
+    // 3. Get Classes using pre-fetched data
+    const allClasses = await getClasses(newEnrollments, capacitiesConfig);
 
     // We can split classes into "NRE Classes" and "Other Classes"
     const nreClasses = allClasses.filter(cls => !filterByNre || normalizeString(cls.nre_tutor) === normalizedTutorNre);

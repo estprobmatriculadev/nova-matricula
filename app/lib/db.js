@@ -49,13 +49,24 @@ export async function saveClassCapacity(classKey, capacity) {
 // TURMAS — calculadas a partir de CSV + Firestore
 // ─────────────────────────────────────────────
 
-export async function getClasses() {
+export async function getClasses(preFetchedEnrollments = null, preFetchedCapacities = null) {
   // Dados estáticos (CSV base da planilha original)
   const baseMatricula = parseMatricula();
-  // Dados dinâmicos (matrículas feitas pelo portal — Firestore)
-  const newEnrollments = await getNewEnrollments();
-  // Capacidades configuradas (Firestore)
-  const capacitiesConfig = await getClassCapacities();
+  
+  let newEnrollments = preFetchedEnrollments;
+  let capacitiesConfig = preFetchedCapacities;
+
+  // Se algum dado não foi passado pré-carregado, busca do banco em paralelo
+  if (!newEnrollments || !capacitiesConfig) {
+    const promises = [];
+    if (!newEnrollments) {
+      promises.push(getNewEnrollments().then(res => { newEnrollments = res; }));
+    }
+    if (!capacitiesConfig) {
+      promises.push(getClassCapacities().then(res => { capacitiesConfig = res; }));
+    }
+    await Promise.all(promises);
+  }
 
   const classesMap = {};
 
