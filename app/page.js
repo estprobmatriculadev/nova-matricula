@@ -57,12 +57,15 @@ export default function LoginPage() {
         if (window.google) {
           window.google.accounts.id.initialize({
             client_id: clientId,
-            callback: handleCredentialResponse
+            callback: handleCredentialResponse,
+            auto_select: true // Habilita o login automático nativo do Google
           });
           window.google.accounts.id.renderButton(
             document.getElementById('google-signin-button'),
             { theme: 'outline', size: 'large', width: '280', text: 'signin_with', shape: 'rectangular' }
           );
+          // Executa o prompt do Google One Tap para login automático instantâneo
+          window.google.accounts.id.prompt();
         }
       };
 

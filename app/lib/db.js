@@ -119,7 +119,13 @@ export async function getClasses(preFetchedEnrollments = null, preFetchedCapacit
         newEnrolledCount: 0,
       };
     }
-    classesMap[key].enrolledCount += 1;
+    
+    // Apenas incrementa a contagem de matriculados se houver de fato um cursista nesta linha
+    const hasStudent = (student.nome_cursista || student.nome || '').toString().trim() !== '' ||
+                       (student.cpf_cursista || student.cpf || '').toString().trim() !== '';
+    if (hasStudent) {
+      classesMap[key].enrolledCount += 1;
+    }
   });
 
   // 2. Conta matrículas novas do Firestore
