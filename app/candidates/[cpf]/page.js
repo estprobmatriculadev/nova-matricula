@@ -281,12 +281,15 @@ export default function CandidateDetailPage({ params }) {
     setTransferError('');
 
     try {
+      const enrolledClass = classes.find(c => c.classKey === selectedClassKey);
+      const actualComponent = enrolledClass ? enrolledClass.componente : candidate.vaga;
+
       const res = await fetch('/api/request-transfer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cpf: candidate.cpf,
-          componente: candidate.vaga,
+          componente: actualComponent,
           requestedModality,
           requestedShift,
         })
