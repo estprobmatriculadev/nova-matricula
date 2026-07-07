@@ -17,7 +17,7 @@ import {
   saveCapacityToFirestore,
   clearAllEnrollments,
   atomicEnrollWithCounterCheck,
-} from './firebaseDb';
+} from './supabaseDb'; // ← migrado de firebaseDb para Supabase
 
 // Re-exporta clearAllEnrollments para uso na rota API de reset
 export { clearAllEnrollments };
