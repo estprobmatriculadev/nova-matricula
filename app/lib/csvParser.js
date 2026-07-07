@@ -101,18 +101,22 @@ export function parseNomeados() {
   }
 }
 
-// 3. Parse Matricula (UTF-8, comma separated)
+// 3. Parse Matricula (win1252 / semicolon-separated — exported from Excel BR)
 export function parseMatricula() {
   try {
     if (!fs.existsSync(MATRICULA_PATH)) {
       console.error('MATRICULA_6_CHAMAMENTO - DATA.csv not found at', MATRICULA_PATH);
       return [];
     }
-    const content = fs.readFileSync(MATRICULA_PATH, 'utf-8');
+    // Read raw buffer and decode from win1252 to handle special chars correctly
+    const buffer = fs.readFileSync(MATRICULA_PATH);
+    const content = iconv.decode(buffer, 'win1252');
     const records = parse(content, {
       columns: true,
+      delimiter: ';',
       skip_empty_lines: true,
-      trim: true
+      trim: true,
+      bom: true,
     });
     return records;
   } catch (error) {
