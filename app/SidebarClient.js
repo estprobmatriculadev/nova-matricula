@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import LogoutButton from './LogoutButton';
+import ThemeSelector from './ThemeSelector';
 
 export default function SidebarClient({ session }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -102,6 +103,8 @@ export default function SidebarClient({ session }) {
             gap: '0.75rem',
           }}
         >
+          <ThemeSelector />
+
           <div className="tutor-info-full">
             <p style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-main)' }}>
               {session.tutorName}

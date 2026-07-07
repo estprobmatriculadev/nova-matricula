@@ -10,6 +10,8 @@ export default function LogoutButton() {
       await fetch('/api/auth', { method: 'DELETE' });
       // Clear cookie client side too just in case
       document.cookie = 'tutor_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+      // Limpa o e-mail salvo para não entrar em loop ao deslogar
+      localStorage.removeItem('tutor_saved_email');
       router.push('/');
       router.refresh();
     } catch (e) {

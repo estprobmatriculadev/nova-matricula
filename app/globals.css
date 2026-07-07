@@ -42,9 +42,9 @@
   --sidebar-width: 280px;
 }
 
-/* Dark Mode Variables */
+/* Dark Mode Variables - supports system settings and explicit class override */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not(.light) {
     --bg-primary: #0b0f19;
     --bg-secondary: #111827;
     --bg-card: rgba(17, 24, 39, 0.8);
@@ -65,6 +65,28 @@
     --shadow-md: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 16px -6px rgba(0, 0, 0, 0.2);
     --shadow-lg: 0 20px 35px -5px rgba(0, 0, 0, 0.4), 0 10px 20px -8px rgba(0, 0, 0, 0.3);
   }
+}
+
+:root.dark {
+  --bg-primary: #0b0f19;
+  --bg-secondary: #111827;
+  --bg-card: rgba(17, 24, 39, 0.8);
+  
+  --primary: hsl(142, 70%, 35%);
+  --primary-hover: hsl(142, 70%, 40%);
+  --primary-light: hsl(142, 60%, 12%);
+  
+  --secondary: hsl(200, 90%, 45%);
+  --secondary-hover: hsl(200, 90%, 50%);
+  
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+  
+  --border-color: rgba(55, 65, 81, 0.5);
+  --border-focus: hsl(142, 70%, 35%, 0.6);
+  
+  --shadow-md: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 16px -6px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 20px 35px -5px rgba(0, 0, 0, 0.4), 0 10px 20px -8px rgba(0, 0, 0, 0.3);
 }
 
 * {
@@ -678,6 +700,13 @@ select.form-input option {
   select.form-input option {
     background-color: #1e293b !important;
     color: #f1f5f9 !important;
+  }
+}
+
+/* Hide theme selector text labels on tablet layout to keep it clean and compact */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .theme-text-lbl {
+    display: none !important;
   }
 }
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Script from 'next/script';
+import ThemeSelector from './ThemeSelector';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,6 +17,13 @@ export default function LoginPage() {
     const hasSession = cookies.some(item => item.trim().startsWith('tutor_session='));
     if (hasSession) {
       router.push('/dashboard');
+      return;
+    }
+
+    // Se o e-mail já foi validado anteriormente, entra direto sem precisar digitar novamente
+    const savedEmail = localStorage.getItem('tutor_saved_email');
+    if (savedEmail) {
+      handleLogin(savedEmail);
     }
   }, [router]);
 
@@ -91,6 +99,8 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
+        // Salva o e-mail para permitir o login automático/direto nas próximas visitas
+        localStorage.setItem('tutor_saved_email', emailToUse);
         router.push('/dashboard');
         router.refresh();
       } else {
@@ -241,9 +251,18 @@ export default function LoginPage() {
 
 
 
+          {/* Theme Selector */}
+          <div style={{ 
+            marginTop: '1.5rem', 
+            borderTop: '1px solid var(--border-color)', 
+            paddingTop: '1.25rem' 
+          }}>
+            <ThemeSelector />
+          </div>
+
           {/* Explanatory notes footer */}
           <div style={{
-            marginTop: '1rem',
+            marginTop: '1.25rem',
             fontSize: '0.72rem',
             color: 'var(--text-muted)',
             textAlign: 'center',
