@@ -20,6 +20,77 @@ export function normalizeString(str) {
     .toUpperCase();
 }
 
+// Helper to convert Excel Serial Date (e.g. 46056) to 'DD/MM/YYYY'
+function formatExcelDate(val) {
+  if (!val) return '';
+  const trimmed = val.toString().trim();
+  if (/^\d+$/.test(trimmed)) {
+    const serial = parseInt(trimmed, 10);
+    // Excel erroneously treats 1900 as a leap year, so we offset differently for serial > 59
+    const days = serial - (serial > 59 ? 2 : 1);
+    const date = new Date(1900, 0, 1 + days);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  }
+  return trimmed;
+}
+
+// Helper to convert Excel Serial Time (e.g. 0,645833333) to 'HH:MM'
+function formatExcelTime(val) {
+  if (!val) return '';
+  const trimmed = val.toString().trim().replace(',', '.');
+  if (/^0\.\d+$/.test(trimmed)) {
+    const fraction = parseFloat(trimmed);
+    const totalSeconds = Math.round(fraction * 24 * 3600);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  }
+  // If it has seconds like '08:00:00', trim them to '08:00'
+  if (/^\d{2}:\d{2}:\d{2}$/.test(trimmed)) {
+    return trimmed.substring(0, 5);
+  }
+  return trimmed;
+}
+
+// Helper to extract or fix Google Classroom ID to avoid Excel's E+11 scientific notation
+function formatClassroomId(idVal, classroomUrl) {
+  const url = (classroomUrl || '').toString().trim();
+  
+  // Try to extract directly from Classroom URL first (completely safe from Excel truncation)
+  // Example: https://classroom.google.com/c/ODQ5NzU5OTkwNTQz -> ODQ5NzU5OTkwNTQz -> decodes to 849759990543
+  if (url) {
+    const match = url.match(/\/c\/([a-zA-Z0-9]+)/);
+    if (match && match[1]) {
+      try {
+        const decoded = Buffer.from(match[1], 'base64').toString('utf-8');
+        // Check if the decoded value is a numeric ID
+        if (/^\d+$/.test(decoded)) {
+          return decoded;
+        }
+      } catch (err) {
+        // Fallback
+      }
+    }
+  }
+
+  if (!idVal) return '';
+  const trimmed = idVal.toString().trim().replace(',', '.');
+  
+  // If in scientific notation (e.g. 8.4976E+11)
+  if (/^[+-]?\d+(\.\d+)?[eE][+-]?\d+$/.test(trimmed)) {
+    const num = Number(trimmed);
+    if (!isNaN(num)) {
+      return Math.round(num).toString();
+    }
+  }
+
+  return trimmed;
+}
+
+
 // 1. Parse Tutores (UTF-8, comma separated)
 export function parseTutores() {
   try {
@@ -118,7 +189,19 @@ export function parseMatricula() {
       trim: true,
       bom: true,
     });
-    return records;
+    
+    // Clean Excel-corrupted fields (dates, times, and Classroom IDs)
+    return records.map(r => {
+      const Link_Classroom = r['Link Classroom'] || r['Link_Classroom'] || '';
+      return {
+        ...r,
+        'Link Classroom': Link_Classroom,
+        periodo_ini: formatExcelDate(r.periodo_ini),
+        horario_inicial: formatExcelTime(r.horario_inicial),
+        horario_fim: formatExcelTime(r.horario_fim),
+        id_classroom: formatClassroomId(r.id_classroom, Link_Classroom),
+      };
+    });
   } catch (error) {
     console.error('Error parsing MATRICULA_6_CHAMAMENTO - DATA.csv:', error);
     return [];

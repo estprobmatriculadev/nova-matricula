@@ -528,7 +528,7 @@ export default function DashboardPage() {
           <div className="modal-box" style={{ maxWidth: '420px' }}>
             <h2 style={{ fontSize: '1.2rem', color: 'var(--error)', marginBottom: '0.75rem' }}>⚠️ Confirmar Reset</h2>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '0.5rem' }}>
-              Esta ação irá <strong>apagar permanentemente</strong> todas as matrículas registradas pelo portal no Firebase.
+              Esta ação irá <strong>apagar permanentemente</strong> todas as matrículas registradas pelo portal no Supabase.
             </p>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
               Os dados do CSV base e da planilha original não serão afetados. Use apenas antes de efetivar o sistema.
@@ -684,13 +684,13 @@ export default function DashboardPage() {
       {/* Sync Status Card & Firebase indicator */}
       <div className="dashboard-grid" style={{ marginBottom: '2.5rem' }}>
         <div className="glass-card">
-          <h3 style={{ marginBottom: '0.75rem' }}>Persistência Principal (Firestore)</h3>
+          <h3 style={{ marginBottom: '0.75rem' }}>Persistência Principal (Supabase)</h3>
           <div>
             <div style={{ marginBottom: '0.75rem' }}>
-              <span className="badge badge-success">🔥 Firebase Firestore Conectado</span>
+              <span className="badge badge-success">⚡ Supabase PostgreSQL Conectado</span>
             </div>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
-              As matrículas novas e limites de capacidade das turmas estão persistindo de forma segura e imediata no Firebase.
+              As matrículas novas e limites de capacidade das turmas estão persistindo de forma segura e imediata no Supabase.
             </p>
           </div>
         </div>
