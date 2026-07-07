@@ -38,6 +38,10 @@ function _invalidateCache(...keys) {
   }
 }
 
+export function invalidateEnrollmentsCache() {
+  _invalidateCache('enrollments');
+}
+
 const TTL_ENROLLMENTS = 60_000;   // 60 segundos
 const TTL_CAPACITIES  = 300_000;  // 5 minutos
 

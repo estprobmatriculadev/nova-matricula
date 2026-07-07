@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSupabase } from '../../lib/supabase';
 import { normalizeString } from '../../lib/csvParser';
+import { invalidateEnrollmentsCache } from '../../lib/supabaseDb';
 
 export async function POST(request) {
   try {
@@ -47,6 +48,8 @@ export async function POST(request) {
       .eq('id', docId);
 
     if (updateError) throw updateError;
+
+    invalidateEnrollmentsCache();
 
     return NextResponse.json({ success: true, message: 'Solicitação de troca enviada com sucesso!' });
   } catch (error) {

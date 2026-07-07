@@ -318,7 +318,7 @@ export default function CandidatesPage() {
                         <span className="badge badge-success">✓ Ensalado</span>
                       ) : c.status === 'ENROLLED_MANUAL' ? (
                         <span className="badge" style={{ backgroundColor: '#0284c7', color: '#ffffff' }}>
-                          ✓ Ensalado (Manual)
+                          ✓ Ensalamento manual realizado pela CFDEG
                         </span>
                       ) : (
                         <span className="badge badge-pending">⏳ Pendente</span>

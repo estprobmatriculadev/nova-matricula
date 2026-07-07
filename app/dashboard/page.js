@@ -331,7 +331,7 @@ export default function DashboardPage() {
     : data.candidates;
 
   const totalCandidates = filteredCandidates.length;
-  const enrolledCandidates = filteredCandidates.filter(c => c.status === 'ENROLLED').length;
+  const enrolledCandidates = filteredCandidates.filter(c => c.status === 'ENROLLED' || c.status === 'ENROLLED_MANUAL').length;
   const pendingCandidates = totalCandidates - enrolledCandidates;
 
   const pctEnrolled = totalCandidates > 0 ? Math.round((enrolledCandidates / totalCandidates) * 100) : 0;
@@ -358,7 +358,7 @@ export default function DashboardPage() {
     const area = getKnowledgeArea(c.vaga);
     if (areaStats[area]) {
       areaStats[area].total += 1;
-      if (c.status === 'ENROLLED') {
+      if (c.status === 'ENROLLED' || c.status === 'ENROLLED_MANUAL') {
         areaStats[area].enrolled += 1;
       }
     }
@@ -775,7 +775,13 @@ export default function DashboardPage() {
                   <tr key={idx}>
                     <td style={{ fontWeight: '600' }}>{e.nome_cursista}</td>
                     <td>{e.componente}</td>
-                    <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{e.turma}</td>
+                    <td style={{ 
+                      fontSize: '0.85rem', 
+                      color: e.turma === 'MANUAL' ? '#0284c7' : 'var(--text-muted)',
+                      fontWeight: e.turma === 'MANUAL' ? '600' : 'normal'
+                    }}>
+                      {e.turma === 'MANUAL' ? 'Ensalamento manual realizado pela CFDEG' : e.turma}
+                    </td>
                     <td>{e.cgm}</td>
                     <td>
                       <code style={{
