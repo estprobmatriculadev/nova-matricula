@@ -124,7 +124,7 @@ export async function POST(request) {
       id_classroom: targetClass.id_classroom,
       cgm: '', // CGM removed as requested
       rg: candidate.rg.trim(),
-      periodo_ini: candidate.data_exercicio || candidate.data_ingresso || '03/02/2026',
+      periodo_ini: candidate.data_exercicio || candidate.data_ingresso || '24/06/2026',
       chamamento: '6º Chamamento',
       nre_exe: candidate.nre.trim().toUpperCase(),
       munic_exe: candidate.nre.trim().toUpperCase(), // Default to NRE name as municipality placeholder
