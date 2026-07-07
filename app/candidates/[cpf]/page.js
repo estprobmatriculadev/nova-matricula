@@ -66,11 +66,8 @@ export default function CandidateDetailPage({ params }) {
           throw new Error('Cursista não encontrado ou sem permissão de acesso.');
         }
         
-        // Auto-generate suggested email
-        if (cand.nome) {
-          const suggested = generateSuggestedEmail(cand.nome);
-          setEmail(suggested);
-        }
+        // Email auto-generation disabled to avoid errors, leaving it for manual entry as requested
+        setEmail('');
 
         setCandidate(cand);
 
