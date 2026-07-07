@@ -6,40 +6,52 @@ import Link from 'next/link';
 // Helper to determine knowledge area from vaga name
 function getKnowledgeArea(vaga) {
   const v = (vaga || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
-  if (v.includes('MATEMATICA') || v.includes('BIOLOGIA') || v.includes('QUIMICA') || v.includes('FISICA') || v.includes('CIENCIAS')) {
-    return 'Exatas/Naturais';
+  if (v.includes('MATEMATICA')) {
+    return 'Matemática';
   }
-  if (v.includes('PORTUGUES') || v.includes('LINGUA PORTUGUESA') || v.includes('INGLES') || v.includes('LINGUA ESTRANGEIRA') || v.includes('ARTE') || v.includes('EDUCACAO FISICA')) {
+  if (v.includes('BIOLOGIA') || v.includes('QUIMICA') || v.includes('FISICA') || v.includes('CIENCIAS')) {
+    return 'Ciências da Natureza';
+  }
+  if (
+    v.includes('PORTUGUES') || 
+    v.includes('LINGUA PORTUGUESA') || 
+    v.includes('INGLES') || 
+    v.includes('LINGUA ESTRANGEIRA') || 
+    v.includes('INGL') || 
+    v.includes('ARTE') || 
+    v.includes('EDUCACAO FISICA') || 
+    v.includes('E FISIC')
+  ) {
     return 'Linguagens';
   }
   if (v.includes('HISTORIA') || v.includes('GEOGRAFIA') || v.includes('FILOSOFIA') || v.includes('SOCIOLOGIA')) {
-    return 'Humanas';
+    return 'Ciências Humanas';
   }
-  if (v.includes('PEDAGOGO') || v.includes('EQ GESTORA') || v.includes('PEDAG')) {
-    return 'Gestão/Pedagogia';
+  if (v.includes('PEDAGOGO') || v.includes('EQ GESTORA') || v.includes('PEDAG') || v.includes('TECNICA') || v.includes('TECNICOS')) {
+    return 'Equipe Gestora';
   }
-  return 'Linguagens'; // default fallback to keep 4-axis radar symmetrical
+  return 'Linguagens'; // default fallback
 }
 
-// Radar Chart Component rendered with pure inline SVG
+// Radar Chart Component rendered with pure inline SVG (updated to 5 axes)
 function SVGRadarChart({ data }) {
   const cx = 140;
   const cy = 130;
   const rMax = 80;
   
-  // Axes configurations
+  // Axes configurations (5 knowledge areas)
   const axes = [
-    { label: 'Exatas/Naturais', val: data.exatas, color: '#3b82f6' },
-    { label: 'Linguagens', val: data.linguagens, color: '#10b981' },
-    { label: 'Humanas', val: data.humanas, color: '#f59e0b' },
-    { label: 'Gestão/Pedagogia', val: data.gestao, color: '#ec4899' }
+    { label: 'Matemática', val: data.matematica, color: '#3b82f6' },
+    { label: 'Ciências da Natureza', val: data.natureza, color: '#10b981' },
+    { label: 'Linguagens', val: data.linguagens, color: '#f59e0b' },
+    { label: 'Ciências Humanas', val: data.humanas, color: '#8b5cf6' },
+    { label: 'Equipe Gestora', val: data.gestao, color: '#ec4899' }
   ];
 
-  // Calculate coordinates for a given value (0 to 1) and angle index (0 to 3)
+  // Calculate coordinates for a given value (0 to 1) and angle index (0 to 4)
   const getCoords = (val, idx) => {
-    const angle = (idx * Math.PI) / 2; // 90 degrees each
+    const angle = (idx * 2 * Math.PI) / 5; // 5-axis: 72 degrees each
     const r = Math.min(1, Math.max(0, val)) * rMax;
-    // Axis 0 is UP, Axis 1 is RIGHT, Axis 2 is DOWN, Axis 3 is LEFT
     const x = cx + r * Math.sin(angle);
     const y = cy - r * Math.cos(angle);
     return { x, y };
@@ -333,12 +345,13 @@ export default function DashboardPage() {
       })
     : recentEnrollments;
 
-  // Calculate radar chart distribution statistics for the active view
+  // Calculate radar chart distribution statistics for the active view (5 areas)
   const areaStats = {
-    'Exatas/Naturais': { total: 0, enrolled: 0 },
+    'Matemática': { total: 0, enrolled: 0 },
+    'Ciências da Natureza': { total: 0, enrolled: 0 },
     'Linguagens': { total: 0, enrolled: 0 },
-    'Humanas': { total: 0, enrolled: 0 },
-    'Gestão/Pedagogia': { total: 0, enrolled: 0 }
+    'Ciências Humanas': { total: 0, enrolled: 0 },
+    'Equipe Gestora': { total: 0, enrolled: 0 }
   };
 
   filteredCandidates.forEach(c => {
@@ -352,10 +365,11 @@ export default function DashboardPage() {
   });
 
   const radarData = {
-    exatas: areaStats['Exatas/Naturais'].total > 0 ? areaStats['Exatas/Naturais'].enrolled / areaStats['Exatas/Naturais'].total : 0,
+    matematica: areaStats['Matemática'].total > 0 ? areaStats['Matemática'].enrolled / areaStats['Matemática'].total : 0,
+    natureza: areaStats['Ciências da Natureza'].total > 0 ? areaStats['Ciências da Natureza'].enrolled / areaStats['Ciências da Natureza'].total : 0,
     linguagens: areaStats['Linguagens'].total > 0 ? areaStats['Linguagens'].enrolled / areaStats['Linguagens'].total : 0,
-    humanas: areaStats['Humanas'].total > 0 ? areaStats['Humanas'].enrolled / areaStats['Humanas'].total : 0,
-    gestao: areaStats['Gestão/Pedagogia'].total > 0 ? areaStats['Gestão/Pedagogia'].enrolled / areaStats['Gestão/Pedagogia'].total : 0
+    humanas: areaStats['Ciências Humanas'].total > 0 ? areaStats['Ciências Humanas'].enrolled / areaStats['Ciências Humanas'].total : 0,
+    gestao: areaStats['Equipe Gestora'].total > 0 ? areaStats['Equipe Gestora'].enrolled / areaStats['Equipe Gestora'].total : 0
   };
 
   // Find the class with highest occupancy (active view NRE vs Global)

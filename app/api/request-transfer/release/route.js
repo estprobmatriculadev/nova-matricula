@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getFirestore } from '../../../lib/firebase';
+import { getSupabase } from '../../../lib/supabase';
 import { normalizeString } from '../../../lib/csvParser';
 
 export async function POST(request) {
@@ -13,16 +13,23 @@ export async function POST(request) {
     const compKey = normalizeString(componente);
     const docId = `${cleanCpf}_${compKey}`;
 
-    const db = getFirestore();
-    const ref = db.collection('enrollments').doc(docId);
-    const doc = await ref.get();
-    if (!doc.exists) {
+    const db = getSupabase();
+    
+    // Get existing enrollment
+    const { data: row, error: fetchError } = await db
+      .from('enrollments')
+      .select('data')
+      .eq('id', docId)
+      .single();
+
+    if (fetchError || !row) {
       return NextResponse.json({ error: 'Matrícula do cursista não encontrada.' }, { status: 404 });
     }
 
     // Em vez de deletar o documento, atualizamos marcando como "ensaladoManual"
     // e limpando a turma/horário para liberar a vaga garantida no sistema.
-    await ref.update({
+    const updatedData = {
+      ...row.data,
       ensaladoManual: true,
       turma: 'MANUAL', // Define a turma como MANUAL para sinalizar
       dia_da_semana: '',
@@ -31,9 +38,19 @@ export async function POST(request) {
       turno: '',
       nome_formador: '',
       cpf_formador: '',
-      'transferRequest.status': 'RESOLVED',
+      transferRequest: {
+        ...(row.data.transferRequest || {}),
+        status: 'RESOLVED'
+      },
       _alteredAt: new Date().toISOString()
-    });
+    };
+
+    const { error: updateError } = await db
+      .from('enrollments')
+      .update({ data: updatedData })
+      .eq('id', docId);
+
+    if (updateError) throw updateError;
 
     return NextResponse.json({ success: true, message: 'Vaga liberada e status alterado para Ensalado (Manual)!' });
   } catch (error) {

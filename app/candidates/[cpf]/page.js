@@ -167,15 +167,32 @@ export default function CandidateDetailPage({ params }) {
   // Get knowledge area of a component for vacancy fallback
   function getAreaOfComponent(vaga) {
     const v = normalizeString(vaga);
-    if (v.includes('MATEMATICA') || v.includes('BIOLOGIA') || v.includes('QUIMICA') || v.includes('FISICA') || v.includes('CIENCIAS')) {
-      return 'CIENCIAS_MATEMATICA';
+    // e) Matemática: matemática
+    if (v.includes('MATEMATICA')) {
+      return 'MATEMATICA';
     }
-    if (v.includes('PORTUGUES') || v.includes('LINGUA PORTUGUESA') || v.includes('INGLES') || v.includes('LINGUA ESTRANGEIRA') || v.includes('ARTE') || v.includes('EDUCACAO FISICA')) {
-      return 'LINGUAGENS_ARTE';
+    // a) Ciências da Natureza: biologia, física, química e ciências
+    if (v.includes('BIOLOGIA') || v.includes('QUIMICA') || v.includes('FISICA') || v.includes('CIENCIAS')) {
+      return 'NATUREZA';
     }
+    // b) Linguagens: Língua Portuguesa, Arte, Educação Física e Inglês
+    if (
+      v.includes('PORTUGUES') || 
+      v.includes('LINGUA PORTUGUESA') || 
+      v.includes('INGLES') || 
+      v.includes('LINGUA ESTRANGEIRA') || 
+      v.includes('INGL') || 
+      v.includes('ARTE') || 
+      v.includes('EDUCACAO FISICA') || 
+      v.includes('E FISIC')
+    ) {
+      return 'LINGUAGENS';
+    }
+    // c) Ciências Humanas: história, filosofia, sociologia e geografia.
     if (v.includes('HISTORIA') || v.includes('GEOGRAFIA') || v.includes('FILOSOFIA') || v.includes('SOCIOLOGIA')) {
       return 'HUMANAS';
     }
+    // d) Equipe Gestora: pedagogo
     if (v.includes('PEDAGOGO') || v.includes('EQ GESTORA') || v.includes('PEDAG')) {
       return 'GESTAO';
     }
