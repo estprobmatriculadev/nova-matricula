@@ -9,9 +9,6 @@ function getKnowledgeArea(vaga) {
   if (v.includes('MATEMATICA')) {
     return 'Matemática';
   }
-  if (v.includes('BIOLOGIA') || v.includes('QUIMICA') || v.includes('FISICA') || v.includes('CIENCIAS')) {
-    return 'Ciências da Natureza';
-  }
   if (
     v.includes('PORTUGUES') || 
     v.includes('LINGUA PORTUGUESA') || 
@@ -23,6 +20,9 @@ function getKnowledgeArea(vaga) {
     v.includes('E FISIC')
   ) {
     return 'Linguagens';
+  }
+  if (v.includes('BIOLOGIA') || v.includes('QUIMICA') || v.includes('FISICA') || v.includes('CIENCIAS')) {
+    return 'Ciências da Natureza';
   }
   if (v.includes('HISTORIA') || v.includes('GEOGRAFIA') || v.includes('FILOSOFIA') || v.includes('SOCIOLOGIA')) {
     return 'Ciências Humanas';

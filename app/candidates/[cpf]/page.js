@@ -171,10 +171,6 @@ export default function CandidateDetailPage({ params }) {
     if (v.includes('MATEMATICA')) {
       return 'MATEMATICA';
     }
-    // a) Ciências da Natureza: biologia, física, química e ciências
-    if (v.includes('BIOLOGIA') || v.includes('QUIMICA') || v.includes('FISICA') || v.includes('CIENCIAS')) {
-      return 'NATUREZA';
-    }
     // b) Linguagens: Língua Portuguesa, Arte, Educação Física e Inglês
     if (
       v.includes('PORTUGUES') || 
@@ -187,6 +183,10 @@ export default function CandidateDetailPage({ params }) {
       v.includes('E FISIC')
     ) {
       return 'LINGUAGENS';
+    }
+    // a) Ciências da Natureza: biologia, física, química e ciências
+    if (v.includes('BIOLOGIA') || v.includes('QUIMICA') || v.includes('FISICA') || v.includes('CIENCIAS')) {
+      return 'NATUREZA';
     }
     // c) Ciências Humanas: história, filosofia, sociologia e geografia.
     if (v.includes('HISTORIA') || v.includes('GEOGRAFIA') || v.includes('FILOSOFIA') || v.includes('SOCIOLOGIA')) {
