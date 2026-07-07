@@ -76,8 +76,8 @@ export default function ClassesPage() {
   useEffect(() => {
     loadClasses();
 
-    // Poll every 30s for real-time updates
-    const interval = setInterval(loadClasses, 30000);
+    // Atualiza a cada 5 minutos (cache server-side de 60s já mantém dados recentes)
+    const interval = setInterval(loadClasses, 300_000);
     return () => clearInterval(interval);
   }, []);
 
@@ -247,7 +247,7 @@ export default function ClassesPage() {
         <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
           {filteredClasses.length} turma{filteredClasses.length !== 1 ? 's' : ''} exibida{filteredClasses.length !== 1 ? 's' : ''}
           {(search || componentFilter !== 'ALL' || scheduleFilter !== 'ALL') && ` (de ${classes.length} total)`}
-          <span style={{ marginLeft: '0.75rem', opacity: 0.7 }}>· Atualização automática a cada 30s</span>
+          <span style={{ marginLeft: '0.75rem', opacity: 0.7 }}>· Atualização automática a cada 5min</span>
         </div>
       </div>
 

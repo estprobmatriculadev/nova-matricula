@@ -16,10 +16,14 @@ import {
   getCapacitiesFromFirestore,
   saveCapacityToFirestore,
   clearAllEnrollments,
+  atomicEnrollWithCounterCheck,
 } from './firebaseDb';
 
 // Re-exporta clearAllEnrollments para uso na rota API de reset
 export { clearAllEnrollments };
+
+// Re-exporta atomicEnrollWithCounterCheck para uso na rota de ensalamento
+export { atomicEnrollWithCounterCheck };
 
 // ─────────────────────────────────────────────
 // MATRÍCULAS NOVAS

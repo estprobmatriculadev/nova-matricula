@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { parseNomeados, normalizeString } from '../../lib/csvParser';
-import { getClasses, saveNewEnrollment } from '../../lib/db';
+import { getClasses, atomicEnrollWithCounterCheck } from '../../lib/db';
 import { appendEnrollmentToSheets, isSheetsConfigured } from '../../lib/googleSheets';
 
 // Helper to normalize CPF
@@ -82,6 +82,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Turma selecionada não encontrada.' }, { status: 404 });
     }
 
+    // Pré-checagem otimista (evita montar o enrollmentRecord desnecessariamente se já estiver lotada)
     if (targetClass.vacancies <= 0) {
       return NextResponse.json({ error: 'Turma lotada. Não há vagas disponíveis.' }, { status: 409 });
     }
@@ -146,12 +147,21 @@ export async function POST(request) {
       outras_necessidades: outras_necessidades || ''
     };
 
-    // 5. Salva no Firestore (banco primário)
-    const firestoreResult = await saveNewEnrollment(enrollmentRecord);
+    // 5. Salva no Firestore de forma ATÔMICA (verifica vaga + grava em uma única transação)
+    // csvCount = alunos do CSV base nessa turma (sem contar os do portal)
+    const csvCount = targetClass.enrolledCount - targetClass.newEnrolledCount;
+    const firestoreResult = await atomicEnrollWithCounterCheck(
+      enrollmentRecord,
+      classKey,
+      csvCount,
+      targetClass.capacity
+    );
+
     if (!firestoreResult.success) {
+      const status = firestoreResult.turmaLotada ? 409 : 500;
       return NextResponse.json({
-        error: `Erro ao salvar no banco de dados: ${firestoreResult.error || 'Tente novamente.'}`
-      }, { status: 500 });
+        error: firestoreResult.error || 'Erro ao salvar no banco de dados. Tente novamente.'
+      }, { status });
     }
 
     // 6. Espelha na planilha Google Sheets de forma assíncrona (fire-and-forget)
