@@ -8,7 +8,7 @@
  * nunca como fonte de leitura.
  */
 
-import { parseMatricula, parseNomeados, parseTutores, normalizeString } from './csvParser';
+import { parseMatricula, parseNomeados, parseTutores, normalizeString, parseTurmasAtualizadas } from './csvParser';
 import {
   getEnrollmentsFromFirestore,
   saveEnrollmentToFirestore,
@@ -54,7 +54,10 @@ export async function saveClassCapacity(classKey, capacity) {
 // ─────────────────────────────────────────────
 
 export async function getClasses(preFetchedEnrollments = null, preFetchedCapacities = null) {
-  // Dados estáticos (CSV base da planilha original)
+  // 0. Catálogo atualizado de turmas (TURMAS_ATUALIZADAS.csv)
+  const turmasCatalog = parseTurmasAtualizadas();
+
+  // Dados estáticos (CSV base da planilha original com cursistas já matriculados)
   const baseMatricula = parseMatricula();
   
   let newEnrollments = preFetchedEnrollments;
@@ -73,6 +76,41 @@ export async function getClasses(preFetchedEnrollments = null, preFetchedCapacit
   }
 
   const classesMap = {};
+
+  // 0. Pré-popula o mapa com TODAS as turmas do catálogo atualizado
+  // (garante que turmas sem matrícula ainda apareçam com vagas disponíveis)
+  turmasCatalog.forEach(t => {
+    const comp  = t.componente || '';
+    const name  = t.turma     || '';
+    const turno = t.turno     || '';
+    const key   = `${normalizeString(comp)}|${normalizeString(name)}|${normalizeString(turno)}`;
+    if (!classesMap[key]) {
+      classesMap[key] = {
+        componente:          comp,
+        turma:               name,
+        turno:               turno,
+        dia_da_semana:       t.dia_da_semana   || '',
+        horario_inicial:     t.horario_inicial || '',
+        horario_fim:         t.horario_fim     || '',
+        nome_formador:       t.nome_formador   || '',
+        cpf_formador:        '',
+        'e-mail_formador':   '',
+        tutor_responsavel:   '',
+        email_tutor:         '',
+        'e-mail_nre':        '',
+        nre_tutor:           '',
+        Link_Classroom:      t['Link Classroom'] || '',
+        id_classroom:        t.id_classroom    || '',
+        nre_formador:        '',
+        telefone_tutor:      '',
+        telefone_formador:   '',
+        rg_formador:         '',
+        componente_formador: '',
+        enrolledCount:       0,
+        newEnrolledCount:    0,
+      };
+    }
+  });
 
   // Conjunto de CPFs no Firestore para evitar contagem dupla
   const firestoreCpfs = new Set(

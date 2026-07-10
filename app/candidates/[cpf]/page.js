@@ -96,12 +96,9 @@ export default function CandidateDetailPage({ params }) {
           }
         }
 
-        // If still empty, display all classes with vacancies as final fallback
+        // If still empty after area fallback, show no classes (no more global fallback)
         if (filteredDropdownClasses.length === 0) {
-          filteredDropdownClasses = allCls.filter(c => c.vacancies > 0);
-          if (filteredDropdownClasses.length > 0) {
-            fallbackMsg = `Todas as turmas da área de conhecimento estão lotadas. Exibindo outras turmas disponíveis no sistema.`;
-          }
+          fallbackMsg = `Não há turmas disponíveis para o componente (${cand.vaga}) ou sua área de conhecimento. Entre em contato com a coordenação.`;
         }
 
         setClasses(filteredDropdownClasses);

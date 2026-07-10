@@ -8,6 +8,7 @@ const TUTORES_PATH = path.join(process.cwd(), 'data', 'csv', 'tutores.csv');
 const NOMEADOS_PATH = path.join(process.cwd(), 'data', 'csv', 'Nomeados_6_chamamento.csv');
 const MATRICULA_PATH = path.join(process.cwd(), 'data', 'csv', 'MATRICULA_6_CHAMAMENTO - DATA.csv');
 const MODELO_PATH = path.join(process.cwd(), 'data', 'csv', 'MODELO_PLANILHA_ENSALAMENTO.csv');
+const TURMAS_PATH = path.join(process.cwd(), 'data', 'csv', 'TURMAS_ATUALIZADAS.csv');
 
 // Helper to normalize strings (remove accents, trim, uppercase)
 export function normalizeString(str) {
@@ -106,13 +107,14 @@ export function parseTutores() {
     });
     return records.map(r => ({
       tutor_responsavel: r.tutor_responsavel || '',
-      rg: r.rg || '',
-      cpf: r.cpf || '',
+      rg:        r.rg        || '',
+      cpf:       r.cpf       || '',
       email_adm: r.email_adm || '',
       email_educ: r.email_educ || '',
       nre_tutor: r.nre_tutor || '',
-      email_nre: r.email_nre || '',
-      telefone: r.telefone || '',
+      // CSV column is 'e-mail_nre' (with hyphen) — must read with bracket notation
+      email_nre: r['e-mail_nre'] || r.email_nre || '',
+      telefone:  r.telefone  || '',
       observacoes: r.observacoes || ''
     }));
   } catch (error) {
@@ -208,7 +210,7 @@ export function parseMatricula() {
   }
 }
 
-// 4. Parse Modelo (UTF-8, comma separated)
+// 4. Parse Modelo (UTF-8, comma separated) — legacy, kept for reference
 export function parseModelo() {
   try {
     if (!fs.existsSync(MODELO_PATH)) {
@@ -224,6 +226,66 @@ export function parseModelo() {
     return records;
   } catch (error) {
     console.error('Error parsing MODELO_PLANILHA_ENSALAMENTO.csv:', error);
+    return [];
+  }
+}
+
+// 5. Parse Turmas Atualizadas (UTF-8, semicolon separated)
+// Columns: modalidade;componente;turma;dia_da_semana;horario_inicial;horario_fim;turno;ano_formativo;nome_formador;Link Classroom
+export function parseTurmasAtualizadas() {
+  try {
+    if (!fs.existsSync(TURMAS_PATH)) {
+      console.warn('TURMAS_ATUALIZADAS.csv not found, falling back to empty list.');
+      return [];
+    }
+    const content = fs.readFileSync(TURMAS_PATH, 'utf-8');
+    const records = parse(content, {
+      columns: true,
+      delimiter: ';',
+      skip_empty_lines: true,
+      trim: true,
+      bom: true,
+    });
+
+    // Deduplicate by turma name (keep first occurrence of each unique turma)
+    const seen = new Set();
+    return records
+      .filter(r => {
+        const key = (r.turma || '').trim().toUpperCase();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .map(r => {
+        const link = (r['Link Classroom'] || '').trim();
+        return {
+          modalidade:      (r.modalidade || '').trim(),
+          componente:      (r.componente || '').trim(),
+          turma:           (r.turma || '').trim(),
+          dia_da_semana:   (r.dia_da_semana || '').trim(),
+          horario_inicial: formatExcelTime(r.horario_inicial) || (r.horario_inicial || '').trim(),
+          horario_fim:     formatExcelTime(r.horario_fim)     || (r.horario_fim     || '').trim(),
+          turno:           (r.turno || '').trim(),
+          ano_formativo:   (r.ano_formativo || '').trim(),
+          nome_formador:   (r.nome_formador || '').trim(),
+          'Link Classroom': link,
+          id_classroom:    formatClassroomId('', link),
+          // Fields not present in new file — kept blank for compatibility
+          nre_tutor:           '',
+          tutor_responsavel:   '',
+          email_tutor:         '',
+          'e-mail_nre':        '',
+          nre_formador:        '',
+          cpf_formador:        '',
+          'e-mail_formador':   '',
+          telefone_tutor:      '',
+          telefone_formador:   '',
+          rg_formador:         '',
+          componente_formador: '',
+        };
+      });
+  } catch (error) {
+    console.error('Error parsing TURMAS_ATUALIZADAS.csv:', error);
     return [];
   }
 }

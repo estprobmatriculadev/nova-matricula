@@ -37,14 +37,17 @@ export async function POST(request) {
         role: 'admin'
       };
     } else {
-      // Find tutor matching the email_nre (Google login email should match e-mail_nre)
+      // Tutor pode entrar com qualquer um dos três e-mails cadastrados:
+      //  1. e-mail pessoal @escola  (email_educ)
+      //  2. e-mail pessoal @educacao (email_adm)
+      //  3. e-mail institucional do NRE (email_nre)
       const tutor = tutors.find(t => {
-        const tutorNreEmail = (t.email_nre || '').trim().toLowerCase();
-        // Also fallback to check administrative or education email just in case,
-        // but prioritize email_nre as requested by the user
-        return tutorNreEmail === normalizedEmail || 
-               (t.email_adm || '').trim().toLowerCase() === normalizedEmail ||
-               (t.email_educ || '').trim().toLowerCase() === normalizedEmail;
+        const emails = [
+          (t.email_nre  || '').trim().toLowerCase(),
+          (t.email_educ || '').trim().toLowerCase(),
+          (t.email_adm  || '').trim().toLowerCase(),
+        ].filter(Boolean);
+        return emails.includes(normalizedEmail);
       });
 
       if (!tutor) {
@@ -56,7 +59,7 @@ export async function POST(request) {
       sessionData = {
         tutorName: tutor.tutor_responsavel,
         nre: tutor.nre_tutor,
-        email: tutor.email_nre || tutor.email_educ || email,
+        email: normalizedEmail,
         role: 'tutor'
       };
     }
