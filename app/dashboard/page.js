@@ -611,6 +611,132 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* ── KPIs Administrativos (somente admin, visão global) ─────────────── */}
+      {tutorInfo.role === 'admin' && !isSimulating && (() => {
+        const totalTurmas = allCls.length;
+        const totalCapacity = allCls.reduce((s, c) => s + c.capacity, 0);
+        const totalOcupados = allCls.reduce((s, c) => s + c.enrolledCount, 0);
+        const totalVagas = allCls.reduce((s, c) => s + c.vacancies, 0);
+
+        // Preenchimento por horário (agrupado por horario_inicial + horario_fim)
+        const bySchedule = {};
+        allCls.forEach(c => {
+          const k = `${c.horario_inicial}–${c.horario_fim}`;
+          if (!bySchedule[k]) bySchedule[k] = { cap: 0, occ: 0, turmas: 0 };
+          bySchedule[k].cap    += c.capacity;
+          bySchedule[k].occ    += c.enrolledCount;
+          bySchedule[k].turmas += 1;
+        });
+        const scheduleRows = Object.entries(bySchedule)
+          .map(([k, v]) => ({ k, ...v, pct: v.cap > 0 ? Math.round((v.occ / v.cap) * 100) : 0 }))
+          .sort((a, b) => a.k.localeCompare(b.k));
+
+        // Preenchimento por NRE (a partir dos candidatos)
+        const byNre = {};
+        data.candidates.forEach(c => {
+          if (!byNre[c.nre]) byNre[c.nre] = { total: 0, enrolled: 0 };
+          byNre[c.nre].total += 1;
+          if (c.status === 'ENROLLED' || c.status === 'ENROLLED_MANUAL') byNre[c.nre].enrolled += 1;
+        });
+        const nreRows = Object.entries(byNre)
+          .map(([nre, v]) => ({ nre, ...v, pct: v.total > 0 ? Math.round((v.enrolled / v.total) * 100) : 0 }))
+          .sort((a, b) => b.pct - a.pct);
+
+        return (
+          <div style={{ marginBottom: '2.5rem' }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '1rem' }}>
+              Visão Global — Turmas
+            </h2>
+            <div className="stats-grid" style={{ marginBottom: '2rem' }}>
+              <div className="glass-card stat-card" style={{ borderLeft: '4px solid var(--primary)' }}>
+                <div className="stat-info">
+                  <p>Total de Turmas</p>
+                  <h3>{totalTurmas}</h3>
+                </div>
+                <div className="stat-icon" style={{ backgroundColor: 'rgba(99,102,241,0.1)', color: 'var(--primary)' }}>🏫</div>
+              </div>
+              <div className="glass-card stat-card" style={{ borderLeft: '4px solid var(--secondary)' }}>
+                <div className="stat-info">
+                  <p>Capacidade Total</p>
+                  <h3>{totalCapacity}</h3>
+                </div>
+                <div className="stat-icon" style={{ backgroundColor: 'rgba(9,105,178,0.1)', color: 'var(--secondary)' }}>🪑</div>
+              </div>
+              <div className="glass-card stat-card" style={{ borderLeft: '4px solid var(--success)' }}>
+                <div className="stat-info">
+                  <p>Vagas Preenchidas</p>
+                  <h3>{totalOcupados}</h3>
+                </div>
+                <div className="stat-icon" style={{ backgroundColor: 'rgba(16,185,129,0.1)', color: 'var(--success)' }}>✅</div>
+              </div>
+              <div className="glass-card stat-card" style={{ borderLeft: '4px solid var(--warning)' }}>
+                <div className="stat-info">
+                  <p>Vagas Disponíveis</p>
+                  <h3>{totalVagas}</h3>
+                </div>
+                <div className="stat-icon" style={{ backgroundColor: 'rgba(245,158,11,0.1)', color: 'var(--warning)' }}>📭</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.5rem' }}>
+              {/* Por Horário */}
+              <div className="glass-card" style={{ padding: '1.75rem' }}>
+                <h3 style={{ marginBottom: '1.25rem', fontSize: '0.95rem' }}>Preenchimento por Horário</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                  {scheduleRows.map(row => (
+                    <div key={row.k}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                        <span style={{ fontSize: '0.82rem', fontWeight: '600', color: 'var(--text-main)' }}>{row.k}</span>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                          {row.occ}/{row.cap} &nbsp;·&nbsp; {row.turmas} turmas &nbsp;
+                          <strong style={{ color: row.pct >= 90 ? 'var(--error)' : row.pct >= 60 ? 'var(--warning)' : 'var(--success)' }}>{row.pct}%</strong>
+                        </span>
+                      </div>
+                      <div style={{ height: '7px', backgroundColor: 'rgba(148,163,184,0.15)', borderRadius: '9999px', overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%',
+                          width: `${Math.min(100, row.pct)}%`,
+                          borderRadius: '9999px',
+                          background: row.pct >= 90 ? 'var(--error)' : row.pct >= 60 ? 'var(--warning)' : 'var(--primary)',
+                          transition: 'width 0.6s ease-out'
+                        }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Por NRE */}
+              <div className="glass-card" style={{ padding: '1.75rem' }}>
+                <h3 style={{ marginBottom: '1.25rem', fontSize: '0.95rem' }}>Preenchimento por NRE</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem', maxHeight: '320px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                  {nreRows.map(row => (
+                    <div key={row.nre}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                        <span style={{ fontSize: '0.82rem', fontWeight: '600', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '65%' }}>{row.nre}</span>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', flexShrink: 0 }}>
+                          {row.enrolled}/{row.total} &nbsp;
+                          <strong style={{ color: row.pct >= 90 ? 'var(--success)' : row.pct >= 50 ? 'var(--warning)' : 'var(--error)' }}>{row.pct}%</strong>
+                        </span>
+                      </div>
+                      <div style={{ height: '7px', backgroundColor: 'rgba(148,163,184,0.15)', borderRadius: '9999px', overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%',
+                          width: `${Math.min(100, row.pct)}%`,
+                          borderRadius: '9999px',
+                          background: row.pct >= 90 ? 'var(--success)' : row.pct >= 50 ? 'var(--warning)' : 'var(--error)',
+                          transition: 'width 0.6s ease-out'
+                        }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Main Grid: Radar Chart + Progress & Extra analysis */}
       <div className="dashboard-grid" style={{ marginBottom: '2.5rem' }}>
         {/* Left: Radar Chart Analysis */}

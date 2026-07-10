@@ -266,7 +266,6 @@ export default function ClassesPage() {
             <table>
               <thead>
                 <tr>
-                  <th>NRE</th>
                   <th>Componente</th>
                   <th>Turma</th>
                   <th>Horário</th>
@@ -283,12 +282,7 @@ export default function ClassesPage() {
                   const isNreClass = c.isNre;
 
                   return (
-                    <tr key={c.classKey} style={{
-                      backgroundColor: isNreClass ? 'rgba(16, 185, 129, 0.01)' : 'transparent'
-                    }}>
-                      <td style={{ fontWeight: isNreClass ? '700' : '400', color: isNreClass ? 'var(--primary)' : 'var(--text-main)' }}>
-                        {c.nre_tutor} {isNreClass ? '★' : ''}
-                      </td>
+                    <tr key={c.classKey}>
                       <td>
                         <span style={{
                           backgroundColor: 'rgba(148, 163, 184, 0.08)',
