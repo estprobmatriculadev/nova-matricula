@@ -230,7 +230,7 @@ export function parseModelo() {
   }
 }
 
-// 5. Parse Turmas Atualizadas (UTF-8, semicolon separated)
+// 5. Parse Turmas Atualizadas (win1252, semicolon separated)
 // Columns: modalidade;componente;turma;dia_da_semana;horario_inicial;horario_fim;turno;ano_formativo;nome_formador;Link Classroom
 export function parseTurmasAtualizadas() {
   try {
@@ -238,7 +238,8 @@ export function parseTurmasAtualizadas() {
       console.warn('TURMAS_ATUALIZADAS.csv not found, falling back to empty list.');
       return [];
     }
-    const content = fs.readFileSync(TURMAS_PATH, 'utf-8');
+    const buffer = fs.readFileSync(TURMAS_PATH);
+    const content = iconv.decode(buffer, 'win1252');
     const records = parse(content, {
       columns: true,
       delimiter: ';',
