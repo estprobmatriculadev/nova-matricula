@@ -168,6 +168,7 @@ export default function DashboardPage() {
 
   // Release states for admin alerts (manual modality change)
   const [releaseConfirmModal, setReleaseConfirmModal] = useState(null);
+  const [selectedTargetClassKey, setSelectedTargetClassKey] = useState('');
   const [releasing, setReleasing] = useState(false);
   const [releaseError, setReleaseError] = useState('');
   const [releaseSuccess, setReleaseSuccess] = useState('');
@@ -204,12 +205,14 @@ export default function DashboardPage() {
 
   function openReleaseModal(alertRecord) {
     setReleaseConfirmModal(alertRecord);
+    setSelectedTargetClassKey('');
     setReleaseError('');
     setReleaseSuccess('');
   }
 
   function closeReleaseModal() {
     setReleaseConfirmModal(null);
+    setSelectedTargetClassKey('');
     setReleaseError('');
     setReleaseSuccess('');
   }
@@ -227,16 +230,17 @@ export default function DashboardPage() {
         body: JSON.stringify({
           cpf: releaseConfirmModal.cpf_cursista,
           componente: releaseConfirmModal.componente,
+          targetClassKey: selectedTargetClassKey || undefined
         }),
       });
 
       const resData = await res.json();
       if (res.ok && resData.success) {
-        setReleaseSuccess('✅ Vaga liberada com sucesso!');
+        setReleaseSuccess(selectedTargetClassKey ? '✅ Cursista transferido com sucesso!' : '✅ Vaga liberada com sucesso!');
         await loadData();
         setTimeout(closeReleaseModal, 2000);
       } else {
-        setReleaseError(resData.error || 'Erro ao liberar vaga.');
+        setReleaseError(resData.error || 'Erro ao processar alteração.');
       }
     } catch (e) {
       setReleaseError('Erro na conexão com o servidor.');
@@ -393,26 +397,51 @@ export default function DashboardPage() {
   return (
     <div className="animate-fade-in">
       {/* Upper header */}
-      <div style={{ marginBottom: '2.5rem' }}>
-        <h1>
-          Painel de Controle —{' '}
-          {tutorInfo.role === 'admin'
-            ? (selectedNre === 'ALL'
-              ? 'Administrador (Global)'
-              : `Simulação Tutor NRE ${selectedNre}`)
-            : `NRE ${tutorInfo.nre}`}
-        </h1>
-        <p className="subtitle">
-          {isSimulating ? (
-            <span style={{ color: 'var(--secondary)', fontWeight: '700' }}>
-              👁️ MODO SIMULADO: Exibindo painel como Tutor Responsável do NRE {selectedNre}
-            </span>
-          ) : (
-            <>
-              Bem-vindo, <strong>{tutorInfo.tutorName}</strong>. Aqui está o resumo das matrículas do 6º Chamamento.
-            </>
-          )}
-        </p>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        flexWrap: 'wrap', 
+        gap: '1.5rem',
+        marginBottom: '2.5rem' 
+      }}>
+        <div>
+          <h1>
+            Painel de Controle —{' '}
+            {tutorInfo.role === 'admin'
+              ? (selectedNre === 'ALL'
+                ? 'Administrador (Global)'
+                : `Simulação Tutor NRE ${selectedNre}`)
+              : `NRE ${tutorInfo.nre}`}
+          </h1>
+          <p className="subtitle">
+            {isSimulating ? (
+              <span style={{ color: 'var(--secondary)', fontWeight: '700' }}>
+                👁️ MODO SIMULADO: Exibindo painel como Tutor Responsável do NRE {selectedNre}
+              </span>
+            ) : (
+              <>
+                Bem-vindo, <strong>{tutorInfo.tutorName}</strong>. Aqui está o resumo das matrículas do 6º Chamamento.
+              </>
+            )}
+          </p>
+        </div>
+
+        {/* Relatório CSV download button */}
+        <a
+          href={tutorInfo.role === 'admin' ? `/api/download-csv?nre=${selectedNre}` : '/api/download-csv'}
+          className="btn btn-primary"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.75rem 1.25rem',
+            fontWeight: '600',
+            textDecoration: 'none'
+          }}
+        >
+          📥 Baixar Relatório (CSV)
+        </a>
       </div>
 
       {/* Alertas de Alteração de Modalidade/Turno (Admin Only) */}
@@ -930,100 +959,161 @@ export default function DashboardPage() {
       </div>
 
       {/* ---- Release Vacancy Confirmation Modal ---- */}
-      {releaseConfirmModal && (
-        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && closeReleaseModal()}>
-          <div className="modal-box" style={{ maxWidth: '440px' }}>
-            {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
-              <div>
-                <h2 style={{ fontSize: '1.2rem', color: 'var(--text-main)' }}>⚠️ Confirmar Liberação de Vaga</h2>
-                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                  Verificação de enturmação manual na planilha.
-                </p>
+      {releaseConfirmModal && (() => {
+        // Simple normalizer helper
+        const norm = str => (str || '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-zA-Z0-9]/g, '')
+          .toUpperCase();
+
+        const reqMod = (releaseConfirmModal.transferRequest?.requestedModality || '').trim().toUpperCase();
+        const reqShift = (releaseConfirmModal.transferRequest?.requestedShift || '').trim().toUpperCase();
+        const originalComp = (releaseConfirmModal.componente || '').trim().toUpperCase();
+
+        const cleanMod = norm(reqMod);
+        const cleanShift = norm(reqShift);
+
+        const matchingClasses = allCls.filter(cls => {
+          const clsShift = norm(cls.turno);
+          if (clsShift !== cleanShift) return false;
+
+          const clsComp = norm(cls.componente);
+          const isReqGestora = cleanMod.includes('GEST') || cleanMod.includes('PEDAG');
+          const isReqTecnicos = cleanMod.includes('TECNIC');
+
+          if (isReqGestora) {
+            return clsComp.includes('GEST') || clsComp.includes('PEDAG');
+          } else if (isReqTecnicos) {
+            return clsComp.includes('TECNIC');
+          } else {
+            const cleanOrigComp = norm(originalComp);
+            return clsComp === cleanOrigComp;
+          }
+        });
+
+        return (
+          <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && closeReleaseModal()}>
+            <div className="modal-box" style={{ maxWidth: '460px' }}>
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.2rem', color: 'var(--text-main)' }}>⚠️ Concluir Solicitação de Troca</h2>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                    Escolha a turma de destino para concluir a troca ou libere a vaga anterior.
+                  </p>
+                </div>
+                <button onClick={closeReleaseModal} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: 'var(--text-muted)' }}>✕</button>
               </div>
-              <button onClick={closeReleaseModal} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: 'var(--text-muted)' }}>✕</button>
-            </div>
 
-            {/* Info details */}
-            <div style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.02)',
-              border: '1px solid var(--border-color)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '0.75rem 1rem',
-              marginBottom: '1.25rem',
-              fontSize: '0.85rem',
-              lineHeight: '1.4'
-            }}>
-              <div><strong>Cursista:</strong> {releaseConfirmModal.nome_cursista}</div>
-              <div><strong>Vaga Original:</strong> {releaseConfirmModal.componente}</div>
-              <div><strong>Turma Anterior no Portal:</strong> {releaseConfirmModal.turma}</div>
-              <div><strong>Modalidade/Turno Pretendidos:</strong> <span style={{ color: 'var(--secondary)', fontWeight: '600' }}>{releaseConfirmModal.transferRequest.requestedModality}</span> ({releaseConfirmModal.transferRequest.requestedShift})</div>
-            </div>
-
-            {/* Question */}
-            <div style={{
-              backgroundColor: 'rgba(249, 115, 22, 0.06)',
-              border: '1px solid rgba(249, 115, 22, 0.15)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '1rem',
-              marginBottom: '1.5rem',
-              textAlign: 'center'
-            }}>
-              <p style={{ fontWeight: '700', fontSize: '0.95rem', color: 'var(--text-main)', marginBottom: '0.5rem' }}>
-                A alteração foi atualizada na planilha com a turma nova?
-              </p>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Ao confirmar, a vaga que estava garantida na turma anterior ({releaseConfirmModal.turma}) será liberada novamente no sistema.
-              </p>
-            </div>
-
-            {/* Feedback messages */}
-            {releaseError && (
+              {/* Info details */}
               <div style={{
-                backgroundColor: 'rgba(239, 68, 68, 0.08)',
-                border: '1px solid rgba(239, 68, 68, 0.2)',
-                color: 'var(--error)',
-                padding: '0.75rem',
+                backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid var(--border-color)',
                 borderRadius: 'var(--radius-sm)',
+                padding: '0.75rem 1rem',
+                marginBottom: '1.25rem',
                 fontSize: '0.85rem',
-                marginBottom: '1rem',
-                fontWeight: '500'
+                lineHeight: '1.4'
               }}>
-                ⚠️ {releaseError}
+                <div><strong>Cursista:</strong> {releaseConfirmModal.nome_cursista}</div>
+                <div><strong>Vaga Original:</strong> {releaseConfirmModal.componente}</div>
+                <div><strong>Turma Anterior:</strong> {releaseConfirmModal.turma}</div>
+                <div><strong>Desejado:</strong> <span style={{ color: 'var(--secondary)', fontWeight: '700' }}>{releaseConfirmModal.transferRequest.requestedModality}</span> ({releaseConfirmModal.transferRequest.requestedShift})</div>
               </div>
-            )}
-            {releaseSuccess && (
-              <div style={{
-                backgroundColor: 'rgba(16, 185, 129, 0.08)',
-                border: '1px solid rgba(16, 185, 129, 0.2)',
-                color: 'var(--success)',
-                padding: '0.75rem',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: '0.85rem',
-                marginBottom: '1rem',
-                fontWeight: '600'
-              }}>
-                {releaseSuccess}
-              </div>
-            )}
 
-            {/* Actions */}
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
-              <button onClick={closeReleaseModal} className="btn btn-outline" disabled={releasing}>
-                Não, Cancelar
-              </button>
-              <button
-                onClick={handleConfirmRelease}
-                className="btn btn-secondary"
-                disabled={releasing || !!releaseSuccess}
-                style={{ minWidth: '180px' }}
-              >
-                {releasing ? 'Liberando...' : 'Sim, Liberar Vaga'}
-              </button>
+              {/* Target Classes Selection */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label htmlFor="target-class-select" style={{ fontWeight: '700', fontSize: '0.88rem', color: 'var(--text-main)', display: 'block', marginBottom: '0.5rem' }}>
+                  Selecione a Turma de Destino (Vagas Disponíveis):
+                </label>
+                {matchingClasses.length > 0 ? (
+                  <select
+                    id="target-class-select"
+                    value={selectedTargetClassKey}
+                    onChange={(e) => setSelectedTargetClassKey(e.target.value)}
+                    className="form-input"
+                    style={{ 
+                      width: '100%', 
+                      padding: '0.5rem', 
+                      borderRadius: 'var(--radius-sm)', 
+                      border: '1px solid var(--border-color)', 
+                      backgroundColor: 'var(--bg-secondary)', 
+                      color: 'var(--text-main)', 
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="">-- Apenas Liberar Vaga Original (Ensalamento Manual) --</option>
+                    {matchingClasses.map(cls => (
+                      <option key={cls.classKey} value={cls.classKey} disabled={cls.vacancies <= 0}>
+                        {cls.turma} · {cls.dia_da_semana} ({cls.turno}) [{cls.vacancies} vaga(s) {cls.vacancies <= 0 ? ' - LOTADA' : ''}]
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div style={{
+                    padding: '0.75rem',
+                    backgroundColor: 'rgba(239, 68, 68, 0.05)',
+                    border: '1px solid rgba(239, 68, 68, 0.15)',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '0.82rem',
+                    color: 'var(--error)',
+                    fontWeight: '500'
+                  }}>
+                    ⚠️ Nenhuma turma correspondente com vagas disponíveis encontrada para esta modalidade/turno.
+                  </div>
+                )}
+              </div>
+
+              {/* Feedback messages */}
+              {releaseError && (
+                <div style={{
+                  backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                  border: '1px solid rgba(239, 68, 68, 0.2)',
+                  color: 'var(--error)',
+                  padding: '0.75rem',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '0.85rem',
+                  marginBottom: '1rem',
+                  fontWeight: '500'
+                }}>
+                  ⚠️ {releaseError}
+                </div>
+              )}
+              {releaseSuccess && (
+                <div style={{
+                  backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  color: 'var(--success)',
+                  padding: '0.75rem',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '0.85rem',
+                  marginBottom: '1rem',
+                  fontWeight: '600'
+                }}>
+                  {releaseSuccess}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                <button onClick={closeReleaseModal} className="btn btn-outline" disabled={releasing}>
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleConfirmRelease}
+                  className="btn btn-secondary"
+                  disabled={releasing || !!releaseSuccess}
+                  style={{ minWidth: '180px' }}
+                >
+                  {releasing ? 'Processando...' : selectedTargetClassKey ? 'Confirmar e Enturmar' : 'Apenas Liberar Vaga'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
