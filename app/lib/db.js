@@ -213,7 +213,9 @@ export async function getClasses(preFetchedEnrollments = null, preFetchedCapacit
   // 3. Calcula capacidades e vagas
   return Object.keys(classesMap).map(key => {
     const cls      = classesMap[key];
-    const capacity = capacitiesConfig[key] !== undefined ? capacitiesConfig[key] : 10;
+    const isTecnicos = normalizeString(cls.componente).includes('TECNIC');
+    const defaultCapacity = isTecnicos ? 30 : 10;
+    const capacity = capacitiesConfig[key] !== undefined ? capacitiesConfig[key] : defaultCapacity;
     const vacancies = Math.max(0, capacity - cls.enrolledCount);
     return { ...cls, classKey: key, capacity, vacancies };
   });
