@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getClasses } from '../../lib/db';
-import { updateEnrollmentInFirestore, saveEnrollmentToFirestore, getEnrollmentsFromFirestore } from '../../lib/firebaseDb';
+import { updateEnrollmentInFirestore, saveEnrollmentToFirestore, getEnrollmentsFromFirestore } from '../../lib/supabaseDb';
 import { parseMatricula, normalizeString } from '../../lib/csvParser';
 
 // Map candidate "VAGA" from Nomeados CSV to classroom "COMPONENTE"
