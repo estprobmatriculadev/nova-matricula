@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import SettingsModal from '../SettingsModal';
 
 // Helper to determine knowledge area from vaga name
 function getKnowledgeArea(vaga) {
@@ -177,6 +178,9 @@ export default function DashboardPage() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [resetMsg, setResetMsg] = useState('');
+
+  // Settings modal state
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   async function loadData() {
     try {
@@ -446,8 +450,8 @@ export default function DashboardPage() {
 
           {/* Admin Settings Button */}
           {tutorInfo.role === 'admin' && (
-            <a
-              href="/admin/settings"
+            <button
+              onClick={() => setShowSettingsModal(true)}
               className="btn btn-primary"
               style={{
                 display: 'flex',
@@ -455,14 +459,15 @@ export default function DashboardPage() {
                 gap: '0.5rem',
                 padding: '0.75rem 1.25rem',
                 fontWeight: '600',
-                textDecoration: 'none',
                 backgroundColor: 'rgba(59, 130, 246, 0.9)',
                 color: 'white',
-                border: '1px solid rgba(59, 130, 246, 0.5)'
+                border: '1px solid rgba(59, 130, 246, 0.5)',
+                cursor: 'pointer',
+                borderRadius: 'var(--radius-sm)'
               }}
             >
               ⚙️ Configurações
-            </a>
+            </button>
           )}
         </div>
       </div>
@@ -1137,6 +1142,13 @@ export default function DashboardPage() {
           </div>
         );
       })()}
+
+      {/* Settings Modal */}
+      <SettingsModal 
+        isOpen={showSettingsModal} 
+        onClose={() => setShowSettingsModal(false)} 
+        session={tutorInfo}
+      />
     </div>
   );
 }
