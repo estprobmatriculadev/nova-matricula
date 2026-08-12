@@ -427,21 +427,44 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* Relatório CSV download button */}
-        <a
-          href={tutorInfo.role === 'admin' ? `/api/download-csv?nre=${selectedNre}` : '/api/download-csv'}
-          className="btn btn-primary"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.75rem 1.25rem',
-            fontWeight: '600',
-            textDecoration: 'none'
-          }}
-        >
-          📥 Baixar Relatório (CSV)
-        </a>
+        {/* Relatório CSV download button + Admin Settings */}
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <a
+            href={tutorInfo.role === 'admin' ? `/api/download-csv?nre=${selectedNre}` : '/api/download-csv'}
+            className="btn btn-primary"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.75rem 1.25rem',
+              fontWeight: '600',
+              textDecoration: 'none'
+            }}
+          >
+            📥 Baixar Relatório (CSV)
+          </a>
+
+          {/* Admin Settings Button */}
+          {tutorInfo.role === 'admin' && (
+            <a
+              href="/admin/settings"
+              className="btn btn-primary"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.75rem 1.25rem',
+                fontWeight: '600',
+                textDecoration: 'none',
+                backgroundColor: 'rgba(59, 130, 246, 0.9)',
+                color: 'white',
+                border: '1px solid rgba(59, 130, 246, 0.5)'
+              }}
+            >
+              ⚙️ Configurações
+            </a>
+          )}
+        </div>
       </div>
 
       {/* Alertas de Alteração de Modalidade/Turno (Admin Only) */}

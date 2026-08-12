@@ -10,8 +10,13 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [googleClientConfigured, setGoogleClientConfigured] = useState(false);
+  const [periodStatus, setPeriodStatus] = useState(null);
+  const [showPeriodClosed, setShowPeriodClosed] = useState(false);
 
   useEffect(() => {
+    // Fetch period status on page load
+    fetchPeriodStatus();
+
     // Check if user is already logged in (redirect to dashboard)
     const cookies = document.cookie.split(';');
     const hasSession = cookies.some(item => item.trim().startsWith('tutor_session='));
@@ -26,6 +31,19 @@ export default function LoginPage() {
       handleLogin(savedEmail);
     }
   }, [router]);
+
+  async function fetchPeriodStatus() {
+    try {
+      const res = await fetch('/api/period-status');
+      const data = await res.json();
+      setPeriodStatus(data);
+      if (!data.isOpen) {
+        setShowPeriodClosed(true);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar status do período:', err);
+    }
+  }
 
   // Handle Google Identity Services Credential response
   function handleCredentialResponse(response) {
@@ -93,6 +111,18 @@ export default function LoginPage() {
     setError('');
 
     try {
+      const normalizedEmail = emailToUse.trim().toLowerCase();
+      const adminEmails = ['jorge.dotti@escola.pr.gov.br', 'estagioprobatorio@escola.pr.gov.br'];
+      const isAdminEmail = adminEmails.includes(normalizedEmail);
+
+      // Verificar se período está fechado antes de autenticar (bloqueia tutores, não admins)
+      if (periodStatus && !periodStatus.isOpen && !isAdminEmail) {
+        setError(`Período de ensalamento encerrado. ${periodStatus.message ? periodStatus.message : 'Entre em contato com a administração.'}`);
+        setShowPeriodClosed(true);
+        setLoading(false);
+        return;
+      }
+
       const res = await fetch('/api/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -278,6 +308,83 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal: Período Encerrado */}
+      {showPeriodClosed && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div style={{
+            backgroundColor: 'var(--bg-primary)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '100%',
+            boxShadow: 'var(--shadow-xl)',
+            border: '1px solid var(--border-color)',
+            textAlign: 'center'
+          }}>
+            <div style={{
+              fontSize: '3rem',
+              marginBottom: '1rem'
+            }}>⏱️</div>
+            <h2 style={{
+              fontSize: '1.5rem',
+              marginBottom: '1rem',
+              color: 'var(--text-primary)'
+            }}>Período Encerrado</h2>
+            <p style={{
+              color: 'var(--text-muted)',
+              marginBottom: '1rem',
+              lineHeight: '1.6'
+            }}>
+              O período de ensalamento foi encerrado.
+            </p>
+            {periodStatus?.message && (
+              <p style={{
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                padding: '1rem',
+                borderRadius: 'var(--radius-sm)',
+                color: '#3b82f6',
+                marginBottom: '1rem',
+                fontSize: '0.95rem'
+              }}>
+                {periodStatus.message}
+              </p>
+            )}
+            <button
+              onClick={() => setShowPeriodClosed(false)}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: 'var(--text-muted)',
+                color: 'white',
+                border: 'none',
+                borderRadius: 'var(--radius-sm)',
+                cursor: 'pointer',
+                fontSize: '0.95rem',
+                fontWeight: '500',
+                transition: 'opacity 0.2s'
+              }}
+              onMouseOver={(e) => e.target.style.opacity = '0.8'}
+              onMouseOut={(e) => e.target.style.opacity = '1'}
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
+
       <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
     </div>
   );
